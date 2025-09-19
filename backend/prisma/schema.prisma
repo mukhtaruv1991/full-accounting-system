@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id             String        @id @default(uuid())
+  name           String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  users          User[]
+  accounts       Account[]
+  journalEntries JournalEntry[]
+  items          Item[]
+  customers      Customer[]
+  suppliers      Supplier[]
+  sales          Sale[]
+  purchases      Purchase[]
+  installments   Installment[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id              String         @id @default(uuid())
+  name            String
+  code            String         @unique
+  type            String
+  parentCode      String?
+  description     String?
+  isDebit         Boolean        @default(true)
+  companyId       String
+  company         Company        @relation(fields: [companyId], references: [id])
+  debitEntries    JournalEntry[] @relation("DebitEntries")
+  creditEntries   JournalEntry[] @relation("CreditEntries")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([parentCode])
+  @@index([companyId])
+}
+
+model JournalEntry {
+  id              String   @id @default(uuid())
+  date            DateTime
+  description     String
+  debitAccountId  String
+  creditAccountId String
+  debitAmount     Float
+  creditAmount    Float
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  debitAccount    Account  @relation("DebitEntries", fields: [debitAccountId], references: [id])
+  creditAccount   Account  @relation("CreditEntries", fields: [creditAccountId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([debitAccountId])
+  @@index([creditAccountId])
+  @@index([companyId])
+}
+
+model Installment {
+  id          String   @id @default(uuid())
+  description String
+  amount      Float
+  dueDate     DateTime
+  isPaid      Boolean  @default(false)
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model Item {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  stock       Int
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?  @unique
+  phone     String?
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  sales     Sale[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model Supplier {
+  id         String     @id @default(uuid())
+  name       String
+  email      String?    @unique
+  phone      String?
+  companyId  String
+  company    Company    @relation(fields: [companyId], references: [id])
+  purchases  Purchase[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([companyId])
+}
+
+model Sale {
+  id          String   @id @default(uuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  date        DateTime
+  totalAmount Float
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([companyId])
+}
+
+model Purchase {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  date       DateTime
+  totalAmount Float
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([companyId])
+}
