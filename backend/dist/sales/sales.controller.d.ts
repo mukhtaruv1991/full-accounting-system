@@ -3,9 +3,49 @@ import { Prisma } from '@prisma/client';
 export declare class SalesController {
     private readonly salesService;
     constructor(salesService: SalesService);
-    create(createSaleDto: Prisma.SaleCreateInput): any;
-    findAll(): any;
-    findOne(id: string): any;
-    update(id: string, updateSaleDto: Prisma.SaleUpdateInput): any;
-    remove(id: string): any;
+    create(createSaleDto: Prisma.SaleCreateInput): Prisma.Prisma__SaleClient<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        date: Date;
+        totalAmount: number;
+        customerId: string;
+    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+    findAll(): Prisma.PrismaPromise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        date: Date;
+        totalAmount: number;
+        customerId: string;
+    }[]>;
+    findOne(id: string): Prisma.Prisma__SaleClient<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        date: Date;
+        totalAmount: number;
+        customerId: string;
+    }, null, import("@prisma/client/runtime/library").DefaultArgs>;
+    update(id: string, updateSaleDto: Prisma.SaleUpdateInput): Prisma.Prisma__SaleClient<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        date: Date;
+        totalAmount: number;
+        customerId: string;
+    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+    remove(id: string): Prisma.Prisma__SaleClient<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        date: Date;
+        totalAmount: number;
+        customerId: string;
+    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
 }

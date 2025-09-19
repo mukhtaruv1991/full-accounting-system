@@ -8,7 +8,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CustomersService = void 0;
 const common_1 = require("@nestjs/common");
@@ -17,25 +16,36 @@ let CustomersService = class CustomersService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    create(data) {
+    async create(data) {
         return this.prisma.customer.create({ data });
     }
-    findAll() {
-        return this.prisma.customer.findMany();
+    async findAll(companyId) {
+        return this.prisma.customer.findMany({ where: { companyId } });
     }
-    findOne(id) {
-        return this.prisma.customer.findUnique({ where: { id } });
+    async findOne(id, companyId) {
+        const customer = await this.prisma.customer.findFirst({
+            where: { id, companyId },
+        });
+        if (!customer) {
+            throw new common_1.NotFoundException(`Customer with ID ${id} not found for this company.`);
+        }
+        return customer;
     }
-    update(id, data) {
-        return this.prisma.customer.update({ where: { id }, data });
+    async update(id, data, companyId) {
+        await this.findOne(id, companyId);
+        return this.prisma.customer.update({
+            where: { id },
+            data,
+        });
     }
-    remove(id) {
+    async remove(id, companyId) {
+        await this.findOne(id, companyId);
         return this.prisma.customer.delete({ where: { id } });
     }
 };
 exports.CustomersService = CustomersService;
 exports.CustomersService = CustomersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], CustomersService);
 //# sourceMappingURL=customers.service.js.map

@@ -11,8 +11,8 @@ import { SalesModule } from './sales/sales.module';
 import { PurchasesModule } from './purchases/purchases.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { CustomersModule } from './customers/customers.module'; // إضافة جديدة
-import { SuppliersModule } from './suppliers/suppliers.module'; // إضافة جديدة
+import { CustomersModule } from './customers/customers.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
 
 @Module({
   imports: [
@@ -25,8 +25,8 @@ import { SuppliersModule } from './suppliers/suppliers.module'; // إضافة ج
     PurchasesModule,
     AuthModule,
     UsersModule,
-    CustomersModule, // إضافة جديدة
-    SuppliersModule, // إضافة جديدة
+    CustomersModule,
+    SuppliersModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

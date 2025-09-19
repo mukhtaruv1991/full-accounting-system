@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
-const LoginPage = () => {
+const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -35,6 +35,10 @@ const LoginPage = () => {
         </div>
         <button type="submit">Login</button>
       </form>
+      <div style={{ marginTop: '1rem' }}>
+        <span>Don't have an account? </span>
+        <Link to="/register">Register here</Link>
+      </div>
     </div>
   );
 };

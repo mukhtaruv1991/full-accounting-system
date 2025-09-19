@@ -21,23 +21,29 @@ let ReportsService = class ReportsService {
         return await workbook.xlsx.writeBuffer();
     }
     async generatePdf(data) {
-        const doc = new pdfkit_1.default({ margin: 50 });
-        const buffers = [];
-        doc.on('data', buffers.push.bind(buffers));
-        doc.on('end', () => {
-            const result = Buffer.concat(buffers);
-            return result;
-        });
-        doc.text('تقرير المحاسبة', { align: 'right' });
-        doc.moveDown();
-        data.forEach(item => {
-            doc.text(`ID: ${item.id}, Name: ${item.name}, Amount: ${item.amount}`, { align: 'right' });
-        });
-        doc.end();
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
+            const doc = new pdfkit_1.default({ margin: 50 });
+            const buffers = [];
+            doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => {
-                resolve(Buffer.concat(buffers));
+                const result = Buffer.concat(buffers);
+                resolve(result);
             });
+            doc.font('Helvetica-Bold').text('Accounting Report', { align: 'center' });
+            doc.moveDown();
+            doc.font('Helvetica-Bold');
+            doc.text('ID', 50, doc.y, { width: 100 });
+            doc.text('Name', 150, doc.y, { width: 200 });
+            doc.text('Amount', 350, doc.y, { align: 'right', width: 150 });
+            doc.moveDown();
+            doc.font('Helvetica');
+            data.forEach(item => {
+                doc.text(item.id, 50, doc.y, { width: 100 });
+                doc.text(item.name, 150, doc.y, { width: 200 });
+                doc.text(item.amount.toString(), 350, doc.y, { align: 'right', width: 150 });
+                doc.moveDown(0.5);
+            });
+            doc.end();
         });
     }
 };

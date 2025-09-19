@@ -1,11 +1,11 @@
 import { PrismaService } from '../prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, Customer } from '@prisma/client';
 export declare class CustomersService {
     private prisma;
     constructor(prisma: PrismaService);
-    create(data: Prisma.CustomerCreateInput): any;
-    findAll(): any;
-    findOne(id: string): any;
-    update(id: string, data: Prisma.CustomerUpdateInput): any;
-    remove(id: string): any;
+    create(data: Prisma.CustomerUncheckedCreateInput): Promise<Customer>;
+    findAll(companyId: string): Promise<Customer[]>;
+    findOne(id: string, companyId: string): Promise<Customer | null>;
+    update(id: string, data: Prisma.CustomerUpdateInput, companyId: string): Promise<Customer>;
+    remove(id: string, companyId: string): Promise<Customer>;
 }

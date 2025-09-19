@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000'; // تأكد من أن هذا يطابق عنوان backend الخاص بك
+const API_BASE_URL = 'http://localhost:5000'; // <-- Reverted to localhost
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -16,14 +16,20 @@ const apiRequest = async (method: string, path: string, data: any = null) => {
     ...(data && { body: JSON.stringify(data) }),
   };
 
-  const response = await fetch(`${API_BASE_URL}${path}`, config);
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, config);
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'Something went wrong');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+      throw new Error(errorData.message || 'Something went wrong');
+    }
+    
+    const text = await response.text();
+    return text ? JSON.parse(text) : {};
+  } catch (error) {
+    console.error('API Request Error:', error);
+    throw new Error('Failed to connect to the server. Please ensure the backend is running and `adb reverse tcp:5000 tcp:5000` is active.');
   }
-
-  return response.json();
 };
 
 export const api = {

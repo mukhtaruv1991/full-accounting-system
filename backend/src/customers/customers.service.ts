@@ -1,28 +1,39 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, Customer } from '@prisma/client';
 
 @Injectable()
 export class CustomersService {
   constructor(private prisma: PrismaService) {}
 
-  create(data: Prisma.CustomerCreateInput) {
+  async create(data: Prisma.CustomerUncheckedCreateInput): Promise<Customer> {
     return this.prisma.customer.create({ data });
   }
 
-  findAll() {
-    return this.prisma.customer.findMany();
+  async findAll(companyId: string): Promise<Customer[]> {
+    return this.prisma.customer.findMany({ where: { companyId } });
   }
 
-  findOne(id: string) {
-    return this.prisma.customer.findUnique({ where: { id } });
+  async findOne(id: string, companyId: string): Promise<Customer | null> {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id, companyId },
+    });
+    if (!customer) {
+      throw new NotFoundException(`Customer with ID ${id} not found for this company.`);
+    }
+    return customer;
   }
 
-  update(id: string, data: Prisma.CustomerUpdateInput) {
-    return this.prisma.customer.update({ where: { id }, data });
+  async update(id: string, data: Prisma.CustomerUpdateInput, companyId: string): Promise<Customer> {
+    await this.findOne(id, companyId); // Verify ownership
+    return this.prisma.customer.update({
+      where: { id },
+      data,
+    });
   }
 
-  remove(id: string) {
+  async remove(id: string, companyId: string): Promise<Customer> {
+    await this.findOne(id, companyId); // Verify ownership
     return this.prisma.customer.delete({ where: { id } });
   }
 }

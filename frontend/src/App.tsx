@@ -3,17 +3,16 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import PrivateRoute from './components/PrivateRoute';
-import { AuthProvider, useAuth } from './context/AuthContext'; // التأكد من استيراد useAuth
+import { AuthProvider, useAuth } from './context/AuthContext';
 
-// استيراد صفحات الوحدات المالية الجديدة
+// Import new financial module pages
 import AccountsPage from './pages/accounts/AccountsPage';
 import JournalEntriesPage from './pages/journal-entries/JournalEntriesPage';
 import ItemsPage from './pages/items/ItemsPage';
 import SalesPage from './pages/sales/SalesPage';
-import PurchasesPage from './pages/purchases/PurchasesPage'; // تم إصلاح المسار والملف
+import PurchasesPage from './pages/purchases/PurchasesPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
-
 
 const AuthStatus = () => {
   const { logout, user } = useAuth();
@@ -33,7 +32,7 @@ function App() {
         <nav style={{ display: 'flex', alignItems: 'center', padding: '10px 20px', backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
           <Link to="/" style={{ marginRight: '15px' }}>Home</Link>
           <Link to="/login" style={{ marginRight: '15px' }}>Login</Link>
-          <Link to="/register" style={{ marginRight: '15px' }}>Register</Link>
+          <Link to="/register" style={{ marginRight: '15px' }}>Register</Link> {/* <-- الرابط المضاف */}
           <AuthStatus />
         </nav>
         <div className="container" style={{ display: 'flex', marginTop: '20px' }}>
@@ -56,7 +55,7 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/" element={<h1>Welcome to the Accounting System</h1>} />
 
-              {/* المسارات المحمية */}
+              {/* Protected Routes */}
               <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
               <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
               <Route path="/journal-entries" element={<PrivateRoute><JournalEntriesPage /></PrivateRoute>} />

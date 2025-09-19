@@ -10,22 +10,36 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
-const accounts_module_1 = require("./accounts/accounts.module");
 const prisma_service_1 = require("./prisma.service");
-const notifications_module_1 = require("./notifications/notifications.module");
-const reports_module_1 = require("./reports/reports.module");
-const journal_entries_module_1 = require("./journal-entries/journal-entries.module");
-const items_module_1 = require("./items/items.module");
-const sales_module_1 = require("./sales/sales.module");
-const purchases_module_1 = require("./purchases/purchases.module");
 const auth_module_1 = require("./auth/auth.module");
 const users_module_1 = require("./users/users.module");
+const accounts_module_1 = require("./accounts/accounts.module");
+const customers_module_1 = require("./customers/customers.module");
+const items_module_1 = require("./items/items.module");
+const journal_entries_module_1 = require("./journal-entries/journal-entries.module");
+const notifications_module_1 = require("./notifications/notifications.module");
+const purchases_module_1 = require("./purchases/purchases.module");
+const reports_module_1 = require("./reports/reports.module");
+const sales_module_1 = require("./sales/sales.module");
+const suppliers_module_1 = require("./suppliers/suppliers.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [accounts_module_1.AccountsModule, notifications_module_1.NotificationsModule, reports_module_1.ReportsModule, journal_entries_module_1.JournalEntriesModule, items_module_1.ItemsModule, sales_module_1.SalesModule, purchases_module_1.PurchasesModule, auth_module_1.AuthModule, users_module_1.UsersModule],
+        imports: [
+            auth_module_1.AuthModule,
+            users_module_1.UsersModule,
+            accounts_module_1.AccountsModule,
+            customers_module_1.CustomersModule,
+            items_module_1.ItemsModule,
+            journal_entries_module_1.JournalEntriesModule,
+            notifications_module_1.NotificationsModule,
+            purchases_module_1.PurchasesModule,
+            reports_module_1.ReportsModule,
+            sales_module_1.SalesModule,
+            suppliers_module_1.SuppliersModule,
+        ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService, prisma_service_1.PrismaService],
     })

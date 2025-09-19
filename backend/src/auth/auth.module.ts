@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UsersModule } from '../users/users.module';
+import { UsersModule } from '../users/users.module'; // التأكد من استيراد UsersModule
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
@@ -10,7 +10,7 @@ dotenv.config();
 
 @Module({
   imports: [
-    UsersModule,
+    UsersModule, // UsersModule مطلوب هنا ليتمكن AuthController من استخدام UsersService
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,

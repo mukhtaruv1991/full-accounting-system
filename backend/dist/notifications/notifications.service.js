@@ -11,15 +11,29 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsService = void 0;
 const common_1 = require("@nestjs/common");
-const node_telegram_bot_api_1 = require("node-telegram-bot-api");
+const TelegramBot = require("node-telegram-bot-api");
 let NotificationsService = class NotificationsService {
     constructor() {
-        this.bot = new node_telegram_bot_api_1.default(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
-        this.bot.onText(/\/start/, (msg) => {
-            this.bot.sendMessage(msg.chat.id, 'مرحباً بك في بوت المحاسبة الذكي!');
-        });
+        try {
+            if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
+                this.bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+                this.bot.onText(/\/start/, (msg) => {
+                    this.bot.sendMessage(msg.chat.id, 'مرحباً بك في بوت المحاسبة الذكي!');
+                });
+            }
+            else {
+                console.log('[NotificationsService] Telegram bot token is not provided. Skipping bot initialization.');
+            }
+        }
+        catch (error) {
+            console.error('[NotificationsService] Failed to initialize Telegram bot:', error.message);
+        }
     }
     async sendNotification(chatId, message) {
+        if (!this.bot) {
+            console.warn('[NotificationsService] Cannot send notification, bot is not initialized.');
+            return;
+        }
         try {
             await this.bot.sendMessage(chatId, message);
         }

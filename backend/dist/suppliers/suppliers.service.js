@@ -8,7 +8,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuppliersService = void 0;
 const common_1 = require("@nestjs/common");
@@ -17,25 +16,42 @@ let SuppliersService = class SuppliersService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    create(data) {
+    async create(data) {
         return this.prisma.supplier.create({ data });
     }
-    findAll() {
-        return this.prisma.supplier.findMany();
+    async findAll(companyId) {
+        return this.prisma.supplier.findMany({ where: { companyId } });
     }
-    findOne(id) {
-        return this.prisma.supplier.findUnique({ where: { id } });
+    async findOne(id, companyId) {
+        const supplier = await this.prisma.supplier.findFirst({
+            where: { id, companyId },
+        });
+        if (!supplier) {
+            throw new common_1.NotFoundException(`Supplier with ID \${id} not found for this company.\`);
     }
-    update(id, data) {
-        return this.prisma.supplier.update({ where: { id }, data });
-    }
-    remove(id) {
-        return this.prisma.supplier.delete({ where: { id } });
+    return supplier;
+  }
+
+  async update(id: string, data: Prisma.SupplierUpdateInput, companyId: string): Promise<Supplier> {
+    await this.findOne(id, companyId); // Verify ownership
+    return this.prisma.supplier.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async remove(id: string, companyId: string): Promise<Supplier> {
+    await this.findOne(id, companyId); // Verify ownership
+    return this.prisma.supplier.delete({ where: { id } });
+  }
+}
+            );
+        }
     }
 };
 exports.SuppliersService = SuppliersService;
 exports.SuppliersService = SuppliersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], SuppliersService);
 //# sourceMappingURL=suppliers.service.js.map
