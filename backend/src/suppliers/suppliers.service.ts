@@ -6,11 +6,11 @@ import { Prisma, Supplier } from '@prisma/client';
 export class SuppliersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: Prisma.SupplierUncheckedCreateInput): Promise<Supplier> {
+  create(data: Prisma.SupplierCreateInput) {
     return this.prisma.supplier.create({ data });
   }
 
-  async findAll(companyId: string): Promise<Supplier[]> {
+  findAll(companyId: string) {
     return this.prisma.supplier.findMany({ where: { companyId } });
   }
 
@@ -19,17 +19,14 @@ export class SuppliersService {
       where: { id, companyId },
     });
     if (!supplier) {
-      throw new NotFoundException(\`Supplier with ID \${id} not found for this company.\`);
+      throw new NotFoundException(`Supplier with ID ${id} not found for this company.`);
     }
     return supplier;
   }
 
   async update(id: string, data: Prisma.SupplierUpdateInput, companyId: string): Promise<Supplier> {
     await this.findOne(id, companyId); // Verify ownership
-    return this.prisma.supplier.update({
-      where: { id },
-      data,
-    });
+    return this.prisma.supplier.update({ where: { id }, data });
   }
 
   async remove(id: string, companyId: string): Promise<Supplier> {
