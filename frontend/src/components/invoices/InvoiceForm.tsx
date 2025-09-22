@@ -6,7 +6,7 @@ import {
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-// Dummy data for now - we will fetch this from localApi later
+// Dummy data for now
 const dummyItems = [
   { id: 'item-1', name: 'Panadol', price: 5.00 },
   { id: 'item-2', name: 'Aspirin', price: 3.50 },
@@ -50,15 +50,16 @@ const InvoiceForm: React.FC = () => {
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>New Invoice</Typography>
-      {/* The fix is here: The 'item' prop is removed from the Grid children. */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid xs={12} sm={6}>
+      
+      {/* DEFINITIVE FIX: Using Box with Flexbox instead of Grid */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexDirection: { xs: 'column', sm: 'row' } }}>
+        <Box sx={{ flex: 1 }}>
           <TextField label="Customer / Supplier" fullWidth variant="outlined" />
-        </Grid>
-        <Grid xs={12} sm={6}>
+        </Box>
+        <Box sx={{ flex: 1 }}>
           <TextField type="date" label="Date" fullWidth variant="outlined" InputLabelProps={{ shrink: true }} defaultValue={new Date().toISOString().split('T')[0]} />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       <TableContainer>
         <Table>
