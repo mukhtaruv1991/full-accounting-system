@@ -57,5 +57,11 @@
   "company_name": "اسم المؤسسة",
   "no_account_register": "ليس لديك حساب؟ سجل الآن",
   "already_have_account": "لديك حساب بالفعل؟ سجل الدخول",
-  "select_company": "اختر المؤسسة"
+  "select_company": "اختر المؤسسة",
+  "join_requests": "طلبات الانضمام",
+  "no_pending_requests": "لا توجد طلبات انضمام معلقة.",
+  "user_name": "اسم المستخدم",
+  "requested_role": "الدور المطلوب",
+  "approve": "موافقة",
+  "reject": "رفض"
 }

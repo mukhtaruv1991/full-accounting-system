@@ -57,5 +57,11 @@
   "company_name": "Company Name",
   "no_account_register": "Don't have an account? Sign Up",
   "already_have_account": "Already have an account? Sign in",
-  "select_company": "Select Company"
+  "select_company": "Select Company",
+  "join_requests": "Join Requests",
+  "no_pending_requests": "No pending join requests.",
+  "user_name": "User Name",
+  "requested_role": "Requested Role",
+  "approve": "Approve",
+  "reject": "Reject"
 }

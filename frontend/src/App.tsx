@@ -15,8 +15,8 @@ import SalesPage from './pages/SalesPage';
 import PurchasesPage from './pages/PurchasesPage';
 import JournalEntriesPage from './pages/JournalEntriesPage';
 import InvoicePage from './pages/InvoicePage';
+import RequestsPage from './pages/admin/RequestsPage'; // Import the new page
 
-// A wrapper for routes that require authentication and a selected company
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, selectedCompany, loading } = useAuth();
 
@@ -41,14 +41,10 @@ function App() {
       <Router>
         <AuthProvider>
           <Routes>
-            {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-
-            {/* Semi-Private Route (requires login but not company selection) */}
             <Route path="/select-company" element={<SelectCompanyPage />} />
 
-            {/* Private Routes inside the main layout */}
             <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
@@ -60,9 +56,9 @@ function App() {
               <Route path="purchases" element={<PurchasesPage />} />
               <Route path="invoices/new" element={<InvoicePage />} />
               <Route path="journal-entries" element={<JournalEntriesPage />} />
+              <Route path="admin/requests" element={<RequestsPage />} /> {/* Add the new route */}
             </Route>
             
-            {/* Fallback for any other route */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </AuthProvider>
