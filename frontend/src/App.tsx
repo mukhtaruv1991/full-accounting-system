@@ -56,9 +56,17 @@ const AppContent: React.FC = () => {
       <List>
         {navItems.map((item) => (
           <ListItem key={item.text} disablePadding>
-            <ListItemButton component={NavLink} to={item.path} style={({ isActive }) => ({
-              backgroundColor: isActive ? 'rgba(0, 0, 0, 0.08)' : 'transparent',
-            })}>
+            {/* THE FIX IS HERE: Using the 'sx' prop for conditional styling */}
+            <ListItemButton
+              component={NavLink}
+              to={item.path}
+              sx={{
+                '&.active': {
+                  backgroundColor: 'action.selected',
+                  fontWeight: 'fontWeightBold',
+                },
+              }}
+            >
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={t(item.text)} />
             </ListItemButton>
