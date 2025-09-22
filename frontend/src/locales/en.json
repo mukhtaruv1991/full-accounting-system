@@ -69,6 +69,10 @@
     "debit_amount": "Debit Amount",
     "credit_amount": "Credit Amount",
     "debit_credit_must_be_equal": "Debit and Credit amounts must be equal.",
-    "accounts_cannot_be_same": "Debit and Credit accounts cannot be the same."
+    "accounts_cannot_be_same": "Debit and Credit accounts cannot be the same.",
+    "total_accounts": "Total Accounts",
+    "total_customers": "Total Customers",
+    "total_suppliers": "Total Suppliers",
+    "total_items": "Total Items"
   }
 }

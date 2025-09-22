@@ -69,6 +69,10 @@
     "debit_amount": "المبلغ المدين",
     "credit_amount": "المبلغ الدائن",
     "debit_credit_must_be_equal": "يجب أن يتساوى المبلغ المدين مع الدائن.",
-    "accounts_cannot_be_same": "لا يمكن أن يكون الحساب المدين هو نفسه الحساب الدائن."
+    "accounts_cannot_be_same": "لا يمكن أن يكون الحساب المدين هو نفسه الحساب الدائن.",
+    "total_accounts": "إجمالي الحسابات",
+    "total_customers": "إجمالي العملاء",
+    "total_suppliers": "إجمالي الموردين",
+    "total_items": "إجمالي الأصناف"
   }
 }
