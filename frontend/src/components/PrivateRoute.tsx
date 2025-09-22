@@ -14,24 +14,30 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     return <div>Loading...</div>;
   }
 
-  // If user is not logged in, redirect to login page
+  // 1. If the user is not logged in at all, always redirect to login.
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If user is logged in, but has not selected a company,
-  // and is NOT trying to access the selection page, redirect them to it.
-  if (!selectedCompany && location.pathname !== '/select-company') {
+  // 2. If the user IS logged in, but has NOT selected a company yet...
+  if (!selectedCompany) {
+    // ...and they are trying to go to the selection page, LET THEM. This is the correct path.
+    if (location.pathname === '/select-company') {
+      return <>{children}</>;
+    }
+    // ...but if they are trying to go anywhere else (like /dashboard), FORCE them to the selection page.
     return <Navigate to="/select-company" replace />;
   }
 
-  // If user is logged in AND has selected a company, but tries to go to
-  // the selection page, redirect them to the dashboard.
-  if (selectedCompany && location.pathname === '/select-company') {
-    return <Navigate to="/dashboard" replace />;
+  // 3. If the user IS logged in AND HAS selected a company...
+  if (selectedCompany) {
+    // ...but they try to go back to the selection page, redirect them to the dashboard.
+    if (location.pathname === '/select-company') {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
-  // If all checks pass, render the requested component
+  // 4. If all checks pass (user is logged in, has a company, and is not on the selection page), render the component.
   return <>{children}</>;
 };
 
