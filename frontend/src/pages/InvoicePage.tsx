@@ -1,209 +1,200 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useReactToPrint } from 'react-to-print';
 import { localApi } from '../api/localApi';
-import { InvoicePrint } from '../components/sales/InvoicePrint';
-import QrScanner from '../components/sales/QrScanner';
+import { v4 as uuidv4 } from 'uuid';
 import {
-  Box, Typography, Button, Paper, Grid, TextField, Autocomplete,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton,
-  Tabs, Tab, Alert, FormControl, InputLabel, Select, MenuItem, Modal, Tooltip, Chip
+  Box, Typography, Paper, Grid, TextField, Button, Select, MenuItem, FormControl, InputLabel,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Autocomplete, CircularProgress, Alert
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import PrintIcon from '@mui/icons-material/Print';
-import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
-import InfoIcon from '@mui/icons-material/Info';
-import { v4 as uuidv4 } from 'uuid';
-import QRCode from 'qrcode.react';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import { format } from 'date-fns';
 
 // --- Interfaces ---
 interface Contact { id: string; name: string; }
-interface Item { id: string; name: string; price: number; cost: number; quantity: number; }
-interface Invoice { id: string; date: string; contactId: string; totalAmount: number; type: InvoiceType; items: InvoiceItem[]; }
-interface InvoiceItem { id: string; itemId: string; name: string; quantity: number; price: number; total: number; }
-type InvoiceType = 'sale' | 'purchase';
-
-// --- Smart Pricing Hint ---
-interface PriceHint {
-  text: string;
-  type: 'info' | 'warning' | 'success';
+interface Item { id: string; name: string; price: number; cost: number; }
+interface InvoiceItem {
+  id: string;
+  itemId: string;
+  quantity: number;
+  price: number;
+  total: number;
 }
-
-const modalStyle = {
-  position: 'absolute' as 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  bgcolor: 'background.paper',
-  border: '2px solid #000',
-  boxShadow: 24,
-  p: 4,
-  textAlign: 'center',
-};
+interface Invoice {
+  id: string;
+  type: 'sale' | 'purchase';
+  date: string;
+  contactId: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  total: number;
+}
 
 const InvoicePage: React.FC = () => {
   const { t } = useTranslation();
-  const [invoiceType, setInvoiceType] = useState<InvoiceType>('sale');
+  const [invoiceType, setInvoiceType] = useState<'sale' | 'purchase'>('sale');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [items, setItems] = useState<Item[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [selectedContactId, setSelectedContactId] = useState<string>('');
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
-  const [priceHints, setPriceHints] = useState<Record<string, PriceHint | null>>({});
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isScannerOpen, setScannerOpen] = useState(false);
-  const printComponentRef = useRef<HTMLDivElement>(null);
 
-  // --- Data Fetching ---
-  const fetchAllData = useCallback(async () => {
+  const fetchInitialData = useCallback(async () => {
     try {
-      const contactStore = invoiceType === 'sale' ? 'customers' : 'suppliers';
-      const [contactsData, itemsData, salesData, purchasesData] = await Promise.all([
-        localApi.get(contactStore),
+      setLoading(true);
+      const [customers, suppliers, itemsData] = await Promise.all([
+        localApi.get('customers'),
+        localApi.get('suppliers'),
         localApi.get('items'),
-        localApi.get('sales'),
-        localApi.get('purchases'),
       ]);
-      setContacts(contactsData);
+      setContacts(invoiceType === 'sale' ? customers : suppliers);
       setItems(itemsData);
-      setInvoices([...salesData, ...purchasesData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
   }, [invoiceType]);
 
   useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+    fetchInitialData();
+  }, [fetchInitialData]);
 
-  // --- Smart Price Hint Logic ---
-  const checkPriceHistory = useCallback(async (itemId: string, currentPrice: number) => {
-    if (!selectedContactId) return;
-
-    const relevantInvoices = (invoiceType === 'sale' ? invoices.filter(inv => inv.type === 'sale') : invoices.filter(inv => inv.type === 'purchase'))
-      .filter(inv => inv.contactId === selectedContactId);
-
-    const historyForItem = relevantInvoices
-      .flatMap(inv => inv.items)
-      .filter(item => item.itemId === itemId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    if (historyForItem.length > 0) {
-      const lastPrice = historyForItem[0].price;
-      if (currentPrice > lastPrice) {
-        setPriceHints(prev => ({ ...prev, [itemId]: { text: `Last price was ${lastPrice.toFixed(2)}. Current is higher.`, type: 'warning' } }));
-      } else if (currentPrice < lastPrice) {
-        setPriceHints(prev => ({ ...prev, [itemId]: { text: `Last price was ${lastPrice.toFixed(2)}. Good deal!`, type: 'success' } }));
-      } else {
-        setPriceHints(prev => ({ ...prev, [itemId]: null }));
-      }
-    } else {
-      setPriceHints(prev => ({ ...prev, [itemId]: { text: 'First time transaction with this contact.', type: 'info' } }));
-    }
-  }, [invoices, selectedContactId, invoiceType]);
-
-  // --- Invoice Items Logic ---
-  const handleAddItem = (item: Item | null) => {
-    if (item && !invoiceItems.find(i => i.itemId === item.id)) {
-      const price = invoiceType === 'sale' ? item.price : item.cost;
-      const newItem: InvoiceItem = {
-        id: uuidv4(),
-        itemId: item.id,
-        name: item.name,
-        quantity: 1,
-        price: price,
-        total: price,
-      };
-      setInvoiceItems([...invoiceItems, newItem]);
-      checkPriceHistory(item.id, price);
-    }
+  const handleAddItem = () => {
+    setInvoiceItems([...invoiceItems, { id: uuidv4(), itemId: '', quantity: 1, price: 0, total: 0 }]);
   };
 
-  const handleItemChange = (id: string, field: 'quantity' | 'price', value: number) => {
-    setInvoiceItems(invoiceItems.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, [field]: value };
-        updatedItem.total = updatedItem.quantity * updatedItem.price;
-        if (field === 'price') {
-          checkPriceHistory(item.itemId, value);
-        }
-        return updatedItem;
+  const handleItemChange = (index: number, field: keyof InvoiceItem, value: any) => {
+    const newItems = [...invoiceItems];
+    const currentItem = newItems[index];
+    
+    if (field === 'itemId') {
+      const selectedItem = items.find(i => i.id === value);
+      if (selectedItem) {
+        currentItem.itemId = value;
+        currentItem.price = invoiceType === 'sale' ? selectedItem.price : selectedItem.cost;
       }
-      return item;
-    }));
+    } else {
+      (currentItem as any)[field] = value;
+    }
+    
+    currentItem.total = currentItem.quantity * currentItem.price;
+    newItems[index] = currentItem;
+    setInvoiceItems(newItems);
   };
 
   const handleRemoveItem = (id: string) => {
     setInvoiceItems(invoiceItems.filter(item => item.id !== id));
   };
 
-  const subtotal = invoiceItems.reduce((acc, item) => acc + item.total, 0);
+  const subtotal = invoiceItems.reduce((sum, item) => sum + item.total, 0);
 
-  const resetForm = () => {
-    setSelectedContactId('');
-    setInvoiceItems([]);
-    setPriceHints({});
-    setError('');
-    setSuccess('');
+  const handleSaveInvoice = async () => {
+    // Logic to save the invoice will be added in the next step
+    console.log({
+      type: invoiceType,
+      contactId: selectedContact?.id,
+      date,
+      items: invoiceItems,
+      total: subtotal,
+    });
+    alert('Invoice saved to console! (Backend logic next)');
   };
 
-  // --- QR and Print Logic ---
-  const handlePrint = useReactToPrint({ content: () => printComponentRef.current });
-  const handleScanSuccess = (decodedText: string) => { /* ... (logic remains the same) ... */ };
+  if (loading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+  }
 
-  // --- Main Save Logic ---
-  const handleSaveInvoice = async () => { /* ... (logic remains the same) ... */ };
+  if (error) {
+    return <Alert severity="error">{error}</Alert>;
+  }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>{t('invoices')}</Typography>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="h5" gutterBottom>{t('new_invoice')}</Typography>
+      
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth>
+            <InputLabel>{t('type')}</InputLabel>
+            <Select value={invoiceType} label={t('type')} onChange={(e) => setInvoiceType(e.target.value as 'sale' | 'purchase')}>
+              <MenuItem value="sale">{t('sales')}</MenuItem>
+              <MenuItem value="purchase">{t('purchases')}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Autocomplete
+            options={contacts}
+            getOptionLabel={(option) => option.name}
+            value={selectedContact}
+            onChange={(_, newValue) => setSelectedContact(newValue)}
+            renderInput={(params) => <TextField {...params} label={t(invoiceType === 'sale' ? 'customer' : 'supplier')} />}
+          />
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <TextField type="date" label={t('date')} value={date} onChange={(e) => setDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
+        </Grid>
+      </Grid>
 
-      <Paper sx={{ p: 2, mb: 4 }}>
-        {/* ... (Header and Tabs remain the same) ... */}
-        <Typography variant="h6" gutterBottom>{t('items')}</Typography>
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>{t('name')}</TableCell>
-                <TableCell align="right">{t('quantity')}</TableCell>
-                <TableCell align="right">{t('price')}</TableCell>
-                <TableCell align="right">{t('total')}</TableCell>
-                <TableCell align="right">{t('actions')}</TableCell>
+      <TableContainer component={Paper} variant="outlined">
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>{t('item')}</TableCell>
+              <TableCell align="right">{t('quantity')}</TableCell>
+              <TableCell align="right">{t('price')}</TableCell>
+              <TableCell align="right">{t('total')}</TableCell>
+              <TableCell align="center">{t('actions')}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {invoiceItems.map((invoiceItem, index) => (
+              <TableRow key={invoiceItem.id}>
+                <TableCell>
+                  <Autocomplete
+                    options={items}
+                    getOptionLabel={(option) => option.name}
+                    value={items.find(i => i.id === invoiceItem.itemId) || null}
+                    onChange={(_, newValue) => handleItemChange(index, 'itemId', newValue?.id || '')}
+                    renderInput={(params) => <TextField {...params} variant="standard" />}
+                  />
+                </TableCell>
+                <TableCell>
+                  <TextField type="number" value={invoiceItem.quantity} onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value) || 0)} fullWidth variant="standard" inputProps={{ style: { textAlign: 'right' } }} />
+                </TableCell>
+                <TableCell>
+                  <TextField type="number" value={invoiceItem.price} onChange={(e) => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)} fullWidth variant="standard" inputProps={{ style: { textAlign: 'right' } }} />
+                </TableCell>
+                <TableCell align="right">${invoiceItem.total.toFixed(2)}</TableCell>
+                <TableCell align="center">
+                  <IconButton onClick={() => handleRemoveItem(invoiceItem.id)} color="error"><DeleteIcon /></IconButton>
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {invoiceItems.map((invoiceItem) => (
-                <TableRow key={invoiceItem.id}>
-                  <TableCell>
-                    {invoiceItem.name}
-                    {priceHints[invoiceItem.itemId] && (
-                      <Tooltip title={priceHints[invoiceItem.itemId]?.text || ''}>
-                        <Chip 
-                          icon={<InfoIcon />} 
-                          label={priceHints[invoiceItem.itemId]?.type}
-                          size="small" 
-                          color={priceHints[invoiceItem.itemId]?.type}
-                          sx={{ ml: 1 }}
-                        />
-                      </Tooltip>
-                    )}
-                  </TableCell>
-                  <TableCell align="right"><TextField type="number" value={invoiceItem.quantity} onChange={(e) => handleItemChange(invoiceItem.id, 'quantity', parseFloat(e.target.value) || 0)} size="small" sx={{ width: '80px' }} /></TableCell>
-                  <TableCell align="right"><TextField type="number" value={invoiceItem.price} onChange={(e) => handleItemChange(invoiceItem.id, 'price', parseFloat(e.target.value) || 0)} size="small" sx={{ width: '100px' }} /></TableCell>
-                  <TableCell align="right">{invoiceItem.total.toFixed(2)}</TableCell>
-                  <TableCell align="right"><IconButton onClick={() => handleRemoveItem(invoiceItem.id)} color="error"><DeleteIcon /></IconButton></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {/* ... (Autocomplete and Footer remain the same) ... */}
-      </Paper>
-      {/* ... (Modals and Recent Invoices table remain the same) ... */}
-    </Box>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Button startIcon={<AddCircleOutlineIcon />} onClick={handleAddItem} sx={{ mt: 2 }}>
+        {t('add_item')}
+      </Button>
+
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ width: 250 }}>
+          <Typography variant="h6">Subtotal: ${subtotal.toFixed(2)}</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Total: ${subtotal.toFixed(2)}</Typography>
+        </Box>
+      </Box>
+
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+        <Button variant="contained" color="primary" onClick={handleSaveInvoice}>
+          {t('save_invoice')}
+        </Button>
+      </Box>
+    </Paper>
   );
 };
 
