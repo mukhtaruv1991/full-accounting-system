@@ -1,92 +1,129 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { api } from '../api/api';
+import { localApi, AccountingDB } from '../api/localApi';
 import { jwtDecode, JwtPayload } from 'jwt-decode';
 
+interface Membership {
+  company: { id: string; name: string; };
+  role: string;
+}
+
 interface User extends JwtPayload {
-  id: string;
   email: string;
-  memberships: { companyId: string; companyName: string; role: string }[];
+  memberships: Membership[];
 }
 
 interface AuthContextType {
   user: User | null;
-  selectedCompany: { id: string; name: string } | null;
+  selectedCompany: Membership['company'] | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  selectCompany: (company: { id: string; name: string }) => void;
+  selectCompany: (companyId: string) => Promise<void>;
   loading: boolean;
+  authLoading: boolean;
+  syncLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [selectedCompany, setSelectedCompany] = useState<{ id: string; name: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [selectedCompany, setSelectedCompany] = useState<Membership['company'] | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [syncLoading, setSyncLoading] = useState(false);
 
-  useEffect(() => {
+  const syncData = useCallback(async (companyId: string) => {
+    setSyncLoading(true);
+    console.log(`Starting sync for company: ${companyId}`);
+    try {
+      const stores: (keyof AccountingDB)[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries'];
+      
+      // Set the companyId for localApi to use the correct database
+      localApi.setCompanyId(companyId);
+
+      for (const storeName of stores) {
+        console.log(`Syncing ${storeName}...`);
+        const serverData = await api.get(`/${storeName}`);
+        const db = await localApi.getDb(companyId);
+        const tx = db.transaction(storeName, 'readwrite');
+        await tx.store.clear(); // Clear old data before syncing
+        for (const item of serverData) {
+          await tx.store.put(item);
+        }
+        await tx.done;
+        console.log(`Sync complete for ${storeName}.`);
+      }
+    } catch (error) {
+      console.error('Sync failed:', error);
+      // Handle sync error appropriately, maybe show a notification
+    } finally {
+      setSyncLoading(false);
+      console.log('Sync process finished.');
+    }
+  }, []);
+
+  const loadSession = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
         const decodedUser = jwtDecode<User>(token);
         setUser(decodedUser);
-        // Restore selected company if available
-        const storedCompany = localStorage.getItem('selectedCompany');
-        if (storedCompany) {
-          setSelectedCompany(JSON.parse(storedCompany));
-        } else if (decodedUser.memberships?.length === 1) {
-          // Auto-select if only one company
-          const company = { id: decodedUser.memberships[0].companyId, name: decodedUser.memberships[0].companyName };
-          setSelectedCompany(company);
-          localStorage.setItem('selectedCompany', JSON.stringify(company));
+        
+        const storedCompanyId = localStorage.getItem('selectedCompanyId');
+        if (storedCompanyId) {
+          const membership = decodedUser.memberships.find(m => m.company.id === storedCompanyId);
+          if (membership) {
+            setSelectedCompany(membership.company);
+            localApi.setCompanyId(membership.company.id);
+          }
         }
       } catch (error) {
         console.error("Invalid token:", error);
-        logout();
+        localStorage.clear();
       }
     }
-    setLoading(false);
+    setAuthLoading(false);
   }, []);
 
+  useEffect(() => {
+    loadSession();
+  }, [loadSession]);
+
   const login = async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      const { access_token } = response;
-      localStorage.setItem('token', access_token);
-      const decodedUser = jwtDecode<User>(access_token);
-      setUser(decodedUser);
-
-      if (decodedUser.memberships?.length === 1) {
-        const company = { id: decodedUser.memberships[0].companyId, name: decodedUser.memberships[0].companyName };
-        selectCompany(company);
-      } else {
-        setSelectedCompany(null);
-        localStorage.removeItem('selectedCompany');
-      }
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      throw error;
-    }
-  };
-
-  const selectCompany = (company: { id: string; name: string }) => {
-    setSelectedCompany(company);
-    localStorage.setItem('selectedCompany', JSON.stringify(company));
-    // Set companyId for localApi
-    localApi.setCompanyId(company.id);
+    const response = await api.post('/auth/login', { email, password });
+    const { access_token } = response;
+    localStorage.setItem('token', access_token);
+    const decodedUser = jwtDecode<User>(access_token);
+    setUser(decodedUser);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('selectedCompany');
+    localStorage.removeItem('selectedCompanyId');
     setUser(null);
     setSelectedCompany(null);
-    localApi.setCompanyId(null);
+    localApi.setCompanyId(null); // Reset local DB context
   };
 
-  const value = { user, selectedCompany, login, logout, selectCompany, loading };
+  const selectCompany = useCallback(async (companyId: string) => {
+    const membership = user?.memberships.find(m => m.company.id === companyId);
+    if (membership) {
+      localStorage.setItem('selectedCompanyId', companyId);
+      setSelectedCompany(membership.company);
+      await syncData(companyId);
+    }
+  }, [user, syncData]);
+
+  const value = {
+    user,
+    selectedCompany,
+    login,
+    logout,
+    selectCompany,
+    loading: authLoading || syncLoading,
+    authLoading,
+    syncLoading,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
