@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { api } from '../api/api';
 import { jwtDecode, JwtPayload } from 'jwt-decode';
 
-// Define the structure of a membership
 interface Membership {
   companyId: string;
   role: string;
@@ -12,20 +11,18 @@ interface Membership {
   };
 }
 
-// Define the structure of the user object stored in context
 interface AuthUser extends JwtPayload {
   email: string;
   id: string;
 }
 
-// Define the structure for the entire authentication context
 interface AuthContextType {
-  user: AuthUser | null; // The decoded user from the token
-  token: string | null; // The raw JWT
-  memberships: Membership[]; // List of companies the user belongs to
-  selectedCompany: Membership | null; // The currently active company
-  login: (email: string, password: string) => Promise<void>;
-  selectCompany: (companyId: string) => void; // Function to select a company
+  user: AuthUser | null;
+  token: string | null;
+  memberships: Membership[];
+  selectedCompany: Membership | null;
+  login: (email: string, password: string) => Promise<any>; // Changed to return response
+  selectCompany: (companyId: string) => void;
   logout: () => void;
   loading: boolean;
 }
@@ -51,14 +48,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const decodedUser = jwtDecode<AuthUser>(token);
         setUser(decodedUser);
-        // If there's a token, we assume memberships and company are already in local storage
         const savedMemberships = localStorage.getItem('memberships');
         if (savedMemberships) {
           setMemberships(JSON.parse(savedMemberships));
         }
       } catch (error) {
         console.error("Invalid token:", error);
-        logout(); // Clear everything if token is invalid
+        logout();
       }
     }
     setLoading(false);
@@ -78,12 +74,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(access_token);
       setMemberships(userMemberships);
 
-      // If user has only one company, select it automatically. Otherwise, wait for selection.
       if (userMemberships.length === 1) {
         selectCompany(userMemberships[0].companyId);
       }
       
       setLoading(false);
+      return response; // Return the full response
     } catch (error) {
       setLoading(false);
       throw error;

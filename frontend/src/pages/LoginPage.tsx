@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { api } from '../api/api'; // Import api to handle the login response
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,14 +14,15 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setError('');
     try {
-      // The login function in the context will handle everything:
-      // fetching token, setting user, setting memberships, and storing in localStorage.
-      await login(email, password);
-
-      // After login, the AuthProvider's state will update, and the routing
-      // logic in App.tsx and PrivateRoute.tsx will handle the navigation automatically.
-      // We can simply navigate to a protected route like dashboard, and PrivateRoute will do the rest.
-      navigate('/dashboard');
+      // The login function in the context will handle setting the token and user state
+      const response = await login(email, password);
+      
+      // After login, we check the memberships from the response to decide where to navigate
+      if (response && response.memberships && response.memberships.length > 1) {
+        navigate('/select-company');
+      } else {
+        navigate('/dashboard');
+      }
 
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
