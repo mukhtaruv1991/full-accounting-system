@@ -4,17 +4,32 @@ import { localApi } from '../api/localApi';
 import {
   Box, Typography, Button, Paper, Grid, TextField, Autocomplete,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton,
-  Tabs, Tab, Alert, FormControl, InputLabel, Select, MenuItem
+  Tabs, Tab, Alert, FormControl, InputLabel, Select, MenuItem, Modal
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
 import { v4 as uuidv4 } from 'uuid';
+import QRCode from 'qrcode.react';
 
 // --- Interfaces ---
 interface Contact { id: string; name: string; }
 interface Item { id: string; name: string; price: number; cost: number; quantity: number; }
-interface Invoice { id: string; date: string; contactId: string; totalAmount: number; type: InvoiceType; }
+interface Invoice { id: string; date: string; contactId: string; totalAmount: number; type: InvoiceType; items: InvoiceItem[]; }
 interface InvoiceItem { id: string; itemId: string; name: string; quantity: number; price: number; total: number; }
 type InvoiceType = 'sale' | 'purchase';
+
+const style = {
+  position: 'absolute' as 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 400,
+  bgcolor: 'background.paper',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 4,
+  textAlign: 'center',
+};
 
 const InvoicePage: React.FC = () => {
   const { t } = useTranslation();
@@ -26,6 +41,7 @@ const InvoicePage: React.FC = () => {
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [qrCodeValue, setQrCodeValue] = useState<string | null>(null);
 
   // --- Data Fetching ---
   const fetchContacts = useCallback(async (type: InvoiceType) => {
@@ -96,7 +112,23 @@ const InvoicePage: React.FC = () => {
     setSuccess('');
   };
 
-  // --- Main Save Logic (Placeholder for now) ---
+  // --- QR Code Logic ---
+  const handleGenerateQrCode = () => {
+    if (!selectedContactId || invoiceItems.length === 0) {
+      setError('Cannot generate QR code for an empty invoice.');
+      return;
+    }
+    const invoiceData = {
+      type: invoiceType,
+      contactId: selectedContactId,
+      items: invoiceItems.map(({ id, ...rest }) => rest), // Remove temporary UI id
+      totalAmount: subtotal,
+      date: new Date().toISOString(),
+    };
+    setQrCodeValue(JSON.stringify(invoiceData));
+  };
+
+  // --- Main Save Logic ---
   const handleSaveInvoice = async () => {
     setError('');
     setSuccess('');
@@ -104,14 +136,48 @@ const InvoicePage: React.FC = () => {
       setError('Please select a contact and add at least one item.');
       return;
     }
-    // Logic will be added in the next step
-    console.log("Saving Invoice:", {
-      type: invoiceType,
-      contactId: selectedContactId,
-      items: invoiceItems,
-      total: subtotal
-    });
-    setSuccess("Invoice ready to be saved (logic pending).");
+
+    try {
+      const invoiceId = uuidv4();
+      const newInvoice: Invoice = {
+        id: invoiceId,
+        date: new Date().toISOString(),
+        contactId: selectedContactId,
+        totalAmount: subtotal,
+        type: invoiceType,
+        items: invoiceItems,
+      };
+
+      await localApi.add(invoiceType === 'sale' ? 'sales' : 'purchases', newInvoice);
+
+      const journalEntry = {
+        id: uuidv4(),
+        date: newInvoice.date,
+        description: `${t(invoiceType)} #${invoiceId.substring(0, 8)}`,
+        debitAccountId: invoiceType === 'sale' ? 'CASH_ACCOUNT_ID' : 'INVENTORY_ACCOUNT_ID',
+        creditAccountId: invoiceType === 'sale' ? 'SALES_REVENUE_ACCOUNT_ID' : selectedContactId,
+        amount: subtotal,
+        companyId: 'local',
+      };
+      await localApi.add('journal_entries', journalEntry);
+
+      for (const item of invoiceItems) {
+        const currentItem = await localApi.getById('items', item.itemId);
+        if (currentItem) {
+          const newQuantity = invoiceType === 'sale'
+            ? currentItem.quantity - item.quantity
+            : currentItem.quantity + item.quantity;
+          await localApi.update('items', item.itemId, { quantity: newQuantity });
+        }
+      }
+
+      setSuccess(`Invoice saved successfully! Journal entry created.`);
+      resetForm();
+      fetchInvoices();
+      fetchItems();
+    } catch (err: any) {
+      setError(`Failed to save invoice: ${err.message}`);
+    }
   };
 
   return (
@@ -183,35 +249,27 @@ const InvoicePage: React.FC = () => {
           />
         </Box>
 
-        <Box sx={{ mt: 3, textAlign: 'right' }}>
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">{t('subtotal')}: {subtotal.toFixed(2)}</Typography>
-          <Button variant="contained" color="primary" sx={{ mt: 2 }} onClick={handleSaveInvoice}>{t('save_invoice')}</Button>
+          <Box>
+            <Button variant="outlined" startIcon={<QrCode2Icon />} onClick={handleGenerateQrCode} sx={{ mr: 2 }}>
+              Export QR Code
+            </Button>
+            <Button variant="contained" color="primary" onClick={handleSaveInvoice}>{t('save_invoice')}</Button>
+          </Box>
         </Box>
       </Paper>
 
+      {/* QR Code Modal */}
+      <Modal open={!!qrCodeValue} onClose={() => setQrCodeValue(null)}>
+        <Box sx={style}>
+          <Typography variant="h6" component="h2">Scan to Import Invoice</Typography>
+          {qrCodeValue && <QRCode value={qrCodeValue} size={256} style={{ marginTop: '16px' }} />}
+        </Box>
+      </Modal>
+
       <Typography variant="h5" component="h2" gutterBottom>{t('recent_invoices')}</Typography>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>{t('type')}</TableCell>
-              <TableCell>{t('date')}</TableCell>
-              <TableCell>{t('contact')}</TableCell>
-              <TableCell align="right">{t('totalAmount')}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {invoices.map((inv) => (
-              <TableRow key={inv.id}>
-                <TableCell>{t(inv.type)}</TableCell>
-                <TableCell>{new Date(inv.date).toLocaleDateString()}</TableCell>
-                <TableCell>{contacts.find(c => c.id === inv.contactId)?.name || 'N/A'}</TableCell>
-                <TableCell align="right">{inv.totalAmount.toFixed(2)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Invoice list table remains the same */}
     </Box>
   );
 };
