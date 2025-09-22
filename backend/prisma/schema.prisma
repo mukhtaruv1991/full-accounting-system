@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,72 +13,77 @@ datasource db {
 model Company {
   id        String   @id @default(cuid())
   name      String
+  address   String?
+  phone     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // A company has many memberships (users)
-  memberships Membership[]
-
-  // Company-specific data
-  accounts       Account[]
-  items          Item[]
-  customers      Customer[]
-  suppliers      Supplier[]
-  sales          Sale[]
-  purchases      Purchase[]
+  users      User[]
+  accounts   Account[]
+  customers  Customer[]
+  suppliers  Supplier[]
+  items      Item[]
+  sales      Sale[]
+  purchases  Purchase[]
   journalEntries JournalEntry[]
+  membershipRequests MembershipRequest[]
 }
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
+  name      String
+  phone     String?
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // A user can be a member of many companies
   memberships Membership[]
 }
 
-// This is the new join table for the many-to-many relationship
 model Membership {
+  id        String   @id @default(cuid())
   userId    String
   companyId String
-  role      String   @default("MEMBER") // e.g., ADMIN, MEMBER, VIEWER
+  role      String   // "admin", "manager", "viewer", etc.
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@id([userId, companyId]) // Composite primary key
+  @@unique([userId, companyId])
 }
 
-// --- Other Models remain linked to Company ---
+model MembershipRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  status    String   @default("pending") // pending, approved, rejected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+// --- Accounting Models ---
 
 model Account {
   id          String   @id @default(cuid())
   companyId   String
   name        String
-  code        String   @unique
-  type        String
+  code        String
+  type        String   // Asset, Liability, Equity, Revenue, Expense
   parentCode  String?
   description String?
   isDebit     Boolean  @default(true)
+  balance     Float    @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-}
 
-model Item {
-  id          String   @id @default(cuid())
-  companyId   String
-  name        String
-  description String?
-  price       Float
-  cost        Float
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@unique([companyId, code])
 }
 
 model Customer {
@@ -87,8 +95,9 @@ model Customer {
   address   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  sales     Sale[]
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sales   Sale[]
 }
 
 model Supplier {
@@ -100,8 +109,25 @@ model Supplier {
   address   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   purchases Purchase[]
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  price       Float
+  cost        Float
+  quantity    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  saleItems SaleItem[]
+  purchaseItems PurchaseItem[]
 }
 
 model Sale {
@@ -113,8 +139,23 @@ model Sale {
   status      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customer    Customer @relation(fields: [customerId], references: [id])
+
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id])
+  items    SaleItem[]
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  itemId    String
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id])
 }
 
 model Purchase {
@@ -126,8 +167,23 @@ model Purchase {
   status      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  supplier    Supplier @relation(fields: [supplierId], references: [id])
+
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+  items    PurchaseItem[]
+}
+
+model PurchaseItem {
+  id        String   @id @default(cuid())
+  purchaseId String
+  itemId    String
+  quantity  Int
+  cost      Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  item     Item     @relation(fields: [itemId], references: [id])
 }
 
 model JournalEntry {
@@ -141,5 +197,6 @@ model JournalEntry {
   creditAmount    Float
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }

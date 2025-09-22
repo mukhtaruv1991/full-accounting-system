@@ -1,12 +1,6 @@
-import { Controller, Post, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-
-class RegisterDto {
-  email: string;
-  password: string;
-  companyName: string;
-}
 
 @Controller('auth')
 export class AuthController {
@@ -21,18 +15,35 @@ export class AuthController {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    // The login service will now handle the multi-company logic
     return this.authService.login(user);
   }
 
   @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    const { email, password, companyName } = registerDto;
-    if (!email || !password || !companyName) {
-      throw new BadRequestException('Email, password, and company name are required.');
+  async register(@Body() registerDto: any) {
+    const { accountType, name, email, password, phone, companyName, companyAddress, companyPhone, companyIdToJoin } = registerDto;
+
+    if (!accountType || !name || !email || !password || !phone) {
+      throw new BadRequestException('Missing required fields for user registration.');
     }
-    // The create service now handles creating the user, company, and membership
-    await this.usersService.create({ email, password, companyName });
-    return { message: 'Registration successful. Please log in.' };
+
+    switch (accountType) {
+      case 'admin':
+        if (!companyName) {
+          throw new BadRequestException('Company name is required for admin registration.');
+        }
+        return this.usersService.createAdminAndCompany({ name, email, password, phone }, { name: companyName, address: companyAddress, phone: companyPhone });
+      
+      case 'manager':
+        if (!companyIdToJoin) {
+          throw new BadRequestException('Company ID is required for manager registration.');
+        }
+        return this.usersService.createManagerRequest({ name, email, password, phone }, companyIdToJoin);
+
+      case 'normal':
+        return this.usersService.createNormalUser({ name, email, password, phone });
+
+      default:
+        throw new BadRequestException('Invalid account type specified.');
+    }
   }
 }
