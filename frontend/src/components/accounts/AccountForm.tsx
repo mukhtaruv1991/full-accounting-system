@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel } from '@mui/material';
+import { TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel, Box } from '@mui/material';
 
 interface Account { id?: string; name: string; code: string; type: 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense'; parentCode?: string; description?: string; isDebit: boolean; }
 interface AccountFormProps { account: Account | null; onSave: (accountData: Omit<Account, 'id'>) => void; onCancel: () => void; }
