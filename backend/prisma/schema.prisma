@@ -8,154 +8,138 @@ datasource db {
 }
 
 model Company {
-  id             String        @id @default(uuid())
-  name           String
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  users          User[]
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // A company has many memberships (users)
+  memberships Membership[]
+
+  // Company-specific data
   accounts       Account[]
-  journalEntries JournalEntry[]
   items          Item[]
   customers      Customer[]
   suppliers      Supplier[]
   sales          Sale[]
   purchases      Purchase[]
-  installments   Installment[]
+  journalEntries JournalEntry[]
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String?  // <-- Field added
+  id        String   @id @default(cuid())
   email     String   @unique
   password  String
-  role      String   @default("user")
-  companyId String?
-  company   Company? @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // A user can be a member of many companies
+  memberships Membership[]
 }
 
-model Account {
-  id              String         @id @default(uuid())
-  name            String
-  code            String         @unique
-  type            String
-  parentCode      String?
-  description     String?
-  isDebit         Boolean        @default(true)
-  companyId       String
-  company         Company        @relation(fields: [companyId], references: [id])
-  debitEntries    JournalEntry[] @relation("DebitEntries")
-  creditEntries   JournalEntry[] @relation("CreditEntries")
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+// This is the new join table for the many-to-many relationship
+model Membership {
+  userId    String
+  companyId String
+  role      String   @default("MEMBER") // e.g., ADMIN, MEMBER, VIEWER
+  createdAt DateTime @default(now())
 
-  @@index([parentCode])
-  @@index([companyId])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, companyId]) // Composite primary key
+}
+
+// --- Other Models remain linked to Company ---
+
+model Account {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  code        String   @unique
+  type        String
+  parentCode  String?
+  description String?
+  isDebit     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  price       Float
+  cost        Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sales     Sale[]
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchases Purchase[]
+}
+
+model Sale {
+  id          String   @id @default(cuid())
+  companyId   String
+  date        DateTime
+  customerId  String
+  totalAmount Float
+  status      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer    Customer @relation(fields: [customerId], references: [id])
+}
+
+model Purchase {
+  id          String   @id @default(cuid())
+  companyId   String
+  date        DateTime
+  supplierId  String
+  totalAmount Float
+  status      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
 }
 
 model JournalEntry {
-  id              String   @id @default(uuid())
+  id              String   @id @default(cuid())
+  companyId       String
   date            DateTime
   description     String
   debitAccountId  String
   creditAccountId String
   debitAmount     Float
   creditAmount    Float
-  companyId       String
-  company         Company  @relation(fields: [companyId], references: [id])
-  debitAccount    Account  @relation("DebitEntries", fields: [debitAccountId], references: [id])
-  creditAccount   Account  @relation("CreditEntries", fields: [creditAccountId], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-
-  @@index([debitAccountId])
-  @@index([creditAccountId])
-  @@index([companyId])
-}
-
-model Installment {
-  id          String   @id @default(uuid())
-  description String
-  amount      Float
-  dueDate     DateTime
-  isPaid      Boolean  @default(false)
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([companyId])
-}
-
-model Item {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  price       Float
-  stock       Int
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([companyId])
-}
-
-model Customer {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?  @unique
-  phone     String?
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id])
-  sales     Sale[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([companyId])
-}
-
-model Supplier {
-  id         String     @id @default(uuid())
-  name       String
-  email      String?    @unique
-  phone      String?
-  companyId  String
-  company    Company    @relation(fields: [companyId], references: [id])
-  purchases  Purchase[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-
-  @@index([companyId])
-}
-
-model Sale {
-  id          String   @id @default(uuid())
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id])
-  date        DateTime
-  totalAmount Float
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([customerId])
-  @@index([companyId])
-}
-
-model Purchase {
-  id         String   @id @default(uuid())
-  supplierId String
-  supplier   Supplier @relation(fields: [supplierId], references: [id])
-  date       DateTime
-  totalAmount Float
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([supplierId])
-  @@index([companyId])
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }

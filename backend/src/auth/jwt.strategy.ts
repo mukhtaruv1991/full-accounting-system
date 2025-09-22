@@ -14,6 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    // Fetch the user with all their memberships on every authenticated request
     const user = await this.usersService.findOne(payload.email);
     if (!user) {
       throw new UnauthorizedException();

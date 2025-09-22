@@ -1,12 +1,10 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import { Prisma } from '@prisma/client';
 
 class RegisterDto {
   email: string;
   password: string;
-  name: string; // This property is kept for the DTO, but not passed to the service
   companyName: string;
 }
 
@@ -23,14 +21,18 @@ export class AuthController {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    // The login service will now handle the multi-company logic
     return this.authService.login(user);
   }
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     const { email, password, companyName } = registerDto;
-    // The 'name' property is no longer passed to the create method
-    const user = await this.usersService.create({ email, password }, companyName);
+    if (!email || !password || !companyName) {
+      throw new BadRequestException('Email, password, and company name are required.');
+    }
+    // The create service now handles creating the user, company, and membership
+    await this.usersService.create({ email, password, companyName });
     return { message: 'Registration successful. Please log in.' };
   }
 }

@@ -12,6 +12,7 @@ export class AuthService {
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findOne(email);
+    // Note: user object now contains a `memberships` array
     if (user && (await bcrypt.compare(pass, user.password))) {
       const { password, ...result } = user;
       return result;
@@ -20,15 +21,17 @@ export class AuthService {
   }
 
   async login(user: any) {
-    // Include all necessary user info in the JWT payload
+    // For now, we'll sign a token with the user's ID and email.
+    // The frontend will be responsible for letting the user choose a company.
     const payload = {
       email: user.email,
       sub: user.id,
-      companyId: user.companyId,
-      role: user.role,
     };
+    
+    // We return the access token along with the list of available companies (memberships)
     return {
       access_token: this.jwtService.sign(payload),
+      memberships: user.memberships,
     };
   }
 }

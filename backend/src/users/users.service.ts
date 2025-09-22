@@ -3,55 +3,54 @@ import { PrismaService } from '../prisma.service';
 import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
-// Define a DTO for user creation data to ensure type safety
-interface CreateUserDto {
+interface CreateUserAndCompanyDto {
   email: string;
   password: string;
-  name?: string; // Name is optional as it's not in the User model
+  companyName: string;
 }
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userData: CreateUserDto, companyName: string): Promise<User> {
-    const { email, password } = userData;
+  async create(data: CreateUserAndCompanyDto): Promise<User> {
+    const { email, password, companyName } = data;
 
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    let user = await this.prisma.user.findUnique({ where: { email } });
 
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists.');
+    if (!user) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user = await this.prisma.user.create({
+        data: { email, password: hashedPassword },
+      });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create the company first
     const company = await this.prisma.company.create({
       data: { name: companyName },
     });
 
-    // Then create the user and connect it to the new company
-    const newUser = await this.prisma.user.create({
+    // Create a membership record linking the user and the new company
+    await this.prisma.membership.create({
       data: {
-        email,
-        password: hashedPassword,
-        role: 'ADMIN', // Default role for the first user of a company
-        company: {
-          connect: {
-            id: company.id,
-          },
-        },
+        userId: user.id,
+        companyId: company.id,
+        role: 'ADMIN', // The creator of the company is the ADMIN
       },
     });
 
-    return newUser;
+    return user;
   }
 
-  async findOne(email: string): Promise<User | null> {
+  async findOne(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
+      include: {
+        memberships: { // Include all memberships for the user
+          include: {
+            company: true, // Also include company details for each membership
+          },
+        },
+      },
     });
   }
 }
