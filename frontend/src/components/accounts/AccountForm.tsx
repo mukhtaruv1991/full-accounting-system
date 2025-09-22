@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Button, Select, MenuItem, FormControl, InputLabel, Checkbox, FormControlLabel } from '@mui/material';
+import { Box, TextField, Button, Select, MenuItem, FormControl, InputLabel, Checkbox, FormControlLabel, SelectChangeEvent } from '@mui/material';
 
+// Define the structure of an Account
 interface Account {
   id?: string;
   name: string;
@@ -18,6 +19,7 @@ interface AccountFormProps {
 }
 
 const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) => {
+  // Use a single state object for the form data
   const [formData, setFormData] = useState<Omit<Account, 'id'>>({
     name: '',
     code: '',
@@ -27,6 +29,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) 
     isDebit: true,
   });
 
+  // Effect to populate form when an account is selected for editing
   useEffect(() => {
     if (account) {
       setFormData({
@@ -38,7 +41,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) 
         isDebit: account.isDebit !== undefined ? account.isDebit : true,
       });
     } else {
-      // Reset form for new account
+      // Reset form for a new account
       setFormData({
         name: '',
         code: '',
@@ -50,11 +53,21 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) 
     }
   }, [account]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
+  // Unified handler for text fields and checkboxes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name as string]: type === 'checkbox' ? checked : value,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  // Specific handler for MUI Select component
+  const handleSelectChange = (e: SelectChangeEvent<Account['type']>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
     }));
   };
 
@@ -69,7 +82,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) 
         label="Account Name"
         name="name"
         value={formData.name}
-        onChange={handleChange}
+        onChange={handleInputChange}
         required
         variant="outlined"
         fullWidth
@@ -78,7 +91,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) 
         label="Account Code"
         name="code"
         value={formData.code}
-        onChange={handleChange}
+        onChange={handleInputChange}
         required
         variant="outlined"
         fullWidth
@@ -89,7 +102,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) 
           label="Type"
           name="type"
           value={formData.type}
-          onChange={handleChange}
+          onChange={handleSelectChange} // Use the specific handler here
         >
           <MenuItem value="Asset">Asset</MenuItem>
           <MenuItem value="Liability">Liability</MenuItem>
@@ -99,7 +112,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) 
         </Select>
       </FormControl>
       <FormControlLabel
-        control={<Checkbox checked={formData.isDebit} onChange={handleChange} name="isDebit" />}
+        control={<Checkbox checked={formData.isDebit} onChange={handleInputChange} name="isDebit" />}
         label="Is Debit Nature"
       />
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
