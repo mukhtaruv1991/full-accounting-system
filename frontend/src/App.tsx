@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-// The fix is here: added Navigate to the import list
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -38,7 +37,6 @@ const AuthNav: React.FC = () => {
   );
 };
 
-// This component will handle all the routing logic
 const AppRouter: React.FC = () => {
   const { user, memberships, selectedCompany, loading } = useAuth();
   const navigate = useNavigate();
@@ -73,19 +71,17 @@ const AppRouter: React.FC = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       
-      {/* This route is now correctly handled by the PrivateRoute component */}
-      <Route path="/select-company" element={<PrivateRoute><CompanySelectionPage /></PrivateRoute>} />
-
-      {/* All main app routes are protected */}
-      <Route path="/" element={<PrivateRoute />}>
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="accounts" element={<AccountsPage />} />
-        <Route path="journal-entries" element={<JournalEntriesPage />} />
-        <Route path="items" element={<ItemsPage />} />
-        <Route path="sales" element={<SalesPage />} />
-        <Route path="purchases" element={<PurchasesPage />} />
-        <Route path="customers" element={<CustomersPage />} />
-        <Route path="suppliers" element={<SuppliersPage />} />
+      {/* All protected routes are now nested under a single PrivateRoute */}
+      <Route element={<PrivateRoute />}>
+        <Route path="/select-company" element={<CompanySelectionPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/accounts" element={<AccountsPage />} />
+        <Route path="/journal-entries" element={<JournalEntriesPage />} />
+        <Route path="/items" element={<ItemsPage />} />
+        <Route path="/sales" element={<SalesPage />} />
+        <Route path="/purchases" element={<PurchasesPage />} />
+        <Route path="/customers" element={<CustomersPage />} />
+        <Route path="/suppliers" element={<SuppliersPage />} />
       </Route>
       
       {/* Fallback route */}
