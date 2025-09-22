@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
+// The fix is here: added Navigate to the import list
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
-import PrivateRoute from './components/PrivateRoute'; // We import it from its file
+import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import CompanySelectionPage from './pages/CompanySelectionPage';
 
@@ -93,9 +94,7 @@ const AppRouter: React.FC = () => {
   );
 };
 
-// The simplified PrivateRoute is now only in its own file.
-// We use Outlet for nested routes.
-const App: React.FC = () => {
+function App() {
   return (
     <Router>
       <AuthProvider>
