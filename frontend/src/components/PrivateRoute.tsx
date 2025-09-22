@@ -7,13 +7,24 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, selectedCompany, loading } = useAuth();
 
   if (loading) {
     return <div>Loading authentication...</div>;
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  // User must be logged in AND have a company selected to access private routes
+  if (user && selectedCompany) {
+    return <>{children}</>;
+  }
+  
+  // If user is logged in but has no company selected, they should be at the selection page
+  if (user && !selectedCompany) {
+    return <Navigate to="/select-company" replace />;
+  }
+
+  // If not logged in at all, go to login
+  return <Navigate to="/login" replace />;
 };
 
 export default PrivateRoute;

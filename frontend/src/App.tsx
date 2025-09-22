@@ -1,11 +1,12 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import CompanySelectionPage from './pages/CompanySelectionPage';
 
-// Import new financial module pages
+// Import financial module pages
 import AccountsPage from './pages/accounts/AccountsPage';
 import JournalEntriesPage from './pages/journal-entries/JournalEntriesPage';
 import ItemsPage from './pages/items/ItemsPage';
@@ -15,13 +16,53 @@ import CustomersPage from './pages/customers/CustomersPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
 
 const AuthStatus = () => {
-  const { logout, user } = useAuth();
-  return user ? (
-    <div style={{ marginLeft: 'auto' }}>
-      Welcome, {user.email}! <button onClick={logout}>Logout</button>
+  const { logout, user, selectedCompany } = useAuth();
+  if (!user) {
+    return <div style={{ marginLeft: 'auto' }}>You are not logged in.</div>;
+  }
+  return (
+    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <span>
+        {user.email} @ <strong>{selectedCompany?.company.name || 'No Company Selected'}</strong>
+      </span>
+      <button onClick={logout}>Logout</button>
     </div>
-  ) : (
-    <div style={{ marginLeft: 'auto' }}>You are not logged in.</div>
+  );
+};
+
+const AppContent: React.FC = () => {
+  const { user, memberships, selectedCompany } = useAuth();
+
+  // If user is logged in but hasn't selected a company and has more than one option
+  if (user && !selectedCompany && memberships.length > 1) {
+    return <Navigate to="/select-company" replace />;
+  }
+  
+  // If user is logged in and has a selected company, redirect from root to dashboard
+  if (user && selectedCompany) {
+     const currentPath = window.location.pathname;
+     if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
+        return <Navigate to="/dashboard" replace />;
+     }
+  }
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/select-company" element={<PrivateRoute><CompanySelectionPage /></PrivateRoute>} />
+      <Route path="/" element={<h1>Welcome to the Accounting System</h1>} />
+
+      {/* Protected Routes */}
+      <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+      <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
+      <Route path="/journal-entries" element={<PrivateRoute><JournalEntriesPage /></PrivateRoute>} />
+      <Route path="/items" element={<PrivateRoute><ItemsPage /></PrivateRoute>} />
+      <Route path="/sales" element={<PrivateRoute><SalesPage /></PrivateRoute>} />
+      <Route path="/purchases" element={<PrivateRoute><PurchasesPage /></PrivateRoute>} />
+      <Route path="/customers" element={<PrivateRoute><CustomersPage /></PrivateRoute>} />
+      <Route path="/suppliers" element={<PrivateRoute><SuppliersPage /></PrivateRoute>} />
+    </Routes>
   );
 };
 
@@ -31,8 +72,6 @@ function App() {
       <AuthProvider>
         <nav style={{ display: 'flex', alignItems: 'center', padding: '10px 20px', backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
           <Link to="/" style={{ marginRight: '15px' }}>Home</Link>
-          <Link to="/login" style={{ marginRight: '15px' }}>Login</Link>
-          <Link to="/register" style={{ marginRight: '15px' }}>Register</Link> {/* <-- الرابط المضاف */}
           <AuthStatus />
         </nav>
         <div className="container" style={{ display: 'flex', marginTop: '20px' }}>
@@ -50,21 +89,7 @@ function App() {
             </ul>
           </aside>
           <main style={{ flexGrow: 1, paddingLeft: '20px' }}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/" element={<h1>Welcome to the Accounting System</h1>} />
-
-              {/* Protected Routes */}
-              <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-              <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
-              <Route path="/journal-entries" element={<PrivateRoute><JournalEntriesPage /></PrivateRoute>} />
-              <Route path="/items" element={<PrivateRoute><ItemsPage /></PrivateRoute>} />
-              <Route path="/sales" element={<PrivateRoute><SalesPage /></PrivateRoute>} />
-              <Route path="/purchases" element={<PrivateRoute><PurchasesPage /></PrivateRoute>} />
-              <Route path="/customers" element={<PrivateRoute><CustomersPage /></PrivateRoute>} />
-              <Route path="/suppliers" element={<PrivateRoute><SuppliersPage /></PrivateRoute>} />
-            </Routes>
+            <AppContent />
           </main>
         </div>
       </AuthProvider>
