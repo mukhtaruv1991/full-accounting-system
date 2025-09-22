@@ -15,45 +15,44 @@ import PurchasesPage from './pages/purchases/PurchasesPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
 
-const AuthStatus = () => {
-  const { logout, user, selectedCompany } = useAuth();
-  if (!user) {
-    return <div style={{ marginLeft: 'auto' }}>You are not logged in.</div>;
+const AuthNav: React.FC = () => {
+  const { user, logout, selectedCompany } = useAuth();
+
+  if (user) {
+    return (
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <span>
+          {user.email} @ <strong>{selectedCompany?.company.name || '...'}</strong>
+        </span>
+        <button onClick={logout}>Logout</button>
+      </div>
+    );
   }
+
   return (
-    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-      <span>
-        {user.email} @ <strong>{selectedCompany?.company.name || 'No Company Selected'}</strong>
-      </span>
-      <button onClick={logout}>Logout</button>
+    <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem' }}>
+      <Link to="/login">Login</Link>
+      <Link to="/register">Register</Link>
     </div>
   );
 };
 
-const AppContent: React.FC = () => {
-  const { user, memberships, selectedCompany } = useAuth();
+const AppRoutes: React.FC = () => {
+  const { user, loading } = useAuth();
 
-  // If user is logged in but hasn't selected a company and has more than one option
-  if (user && !selectedCompany && memberships.length > 1) {
-    return <Navigate to="/select-company" replace />;
-  }
-  
-  // If user is logged in and has a selected company, redirect from root to dashboard
-  if (user && selectedCompany) {
-     const currentPath = window.location.pathname;
-     if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
-        return <Navigate to="/dashboard" replace />;
-     }
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/select-company" element={<PrivateRoute><CompanySelectionPage /></PrivateRoute>} />
-      <Route path="/" element={<h1>Welcome to the Accounting System</h1>} />
+      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" />} />
+      <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/dashboard" />} />
+      
+      {/* Routes accessible only when logged in */}
+      <Route path="/select-company" element={user ? <CompanySelectionPage /> : <Navigate to="/login" />} />
 
-      {/* Protected Routes */}
+      {/* Protected routes that require a selected company */}
       <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
       <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
       <Route path="/journal-entries" element={<PrivateRoute><JournalEntriesPage /></PrivateRoute>} />
@@ -62,6 +61,9 @@ const AppContent: React.FC = () => {
       <Route path="/purchases" element={<PrivateRoute><PurchasesPage /></PrivateRoute>} />
       <Route path="/customers" element={<PrivateRoute><CustomersPage /></PrivateRoute>} />
       <Route path="/suppliers" element={<PrivateRoute><SuppliersPage /></PrivateRoute>} />
+
+      {/* Default route */}
+      <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
     </Routes>
   );
 };
@@ -71,8 +73,8 @@ function App() {
     <Router>
       <AuthProvider>
         <nav style={{ display: 'flex', alignItems: 'center', padding: '10px 20px', backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
-          <Link to="/" style={{ marginRight: '15px' }}>Home</Link>
-          <AuthStatus />
+          <Link to="/" style={{ marginRight: '15px', fontWeight: 'bold' }}>Accounting System</Link>
+          <AuthNav />
         </nav>
         <div className="container" style={{ display: 'flex', marginTop: '20px' }}>
           <aside style={{ width: '20%', paddingRight: '20px', borderRight: '1px solid #eee' }}>
@@ -89,7 +91,7 @@ function App() {
             </ul>
           </aside>
           <main style={{ flexGrow: 1, paddingLeft: '20px' }}>
-            <AppContent />
+            <AppRoutes />
           </main>
         </div>
       </AuthProvider>
