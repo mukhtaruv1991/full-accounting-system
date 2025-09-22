@@ -1,0 +1,26 @@
+{
+  "translation": {
+    "home": "الرئيسية",
+    "dashboard": "لوحة التحكم",
+    "accounts": "الحسابات",
+    "journal_entries": "قيود اليومية",
+    "items": "الأصناف",
+    "sales": "المبيعات",
+    "purchases": "المشتريات",
+    "customers": "العملاء",
+    "suppliers": "الموردون",
+    "new_invoice": "فاتورة جديدة",
+    "customer": "العميل",
+    "supplier": "المورد",
+    "date": "التاريخ",
+    "select_item": "اختر صنف",
+    "quantity": "الكمية",
+    "price": "السعر",
+    "total": "الإجمالي",
+    "actions": "إجراءات",
+    "add_item": "إضافة صنف",
+    "subtotal": "المجموع الفرعي",
+    "save_invoice": "حفظ الفاتورة",
+    "cancel": "إلغاء"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "translation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "accounts": "Accounts",
+    "journal_entries": "Journal Entries",
+    "items": "Items",
+    "sales": "Sales",
+    "purchases": "Purchases",
+    "customers": "Customers",
+    "suppliers": "Suppliers",
+    "new_invoice": "New Invoice",
+    "customer": "Customer",
+    "supplier": "Supplier",
+    "date": "Date",
+    "select_item": "Select Item",
+    "quantity": "Quantity",
+    "price": "Price",
+    "total": "Total",
+    "actions": "Actions",
+    "add_item": "Add Item",
+    "subtotal": "Subtotal",
+    "save_invoice": "Save Invoice",
+    "cancel": "Cancel"
+  }
+}
