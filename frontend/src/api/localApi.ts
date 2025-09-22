@@ -1,28 +1,89 @@
-import { dbPromise } from './db';
+import { openDB, IDBPDatabase } from 'idb';
 
-type StoreName = 'accounts' | 'customers' | 'suppliers' | 'items' | 'sales' | 'purchases' | 'journal_entries';
+interface AccountingDB {
+  accounts: any;
+  customers: any;
+  suppliers: any;
+  items: any;
+  sales: any;
+  purchases: any;
+  journal_entries: any;
+  notifications: any; // Add notifications store
+}
 
-// Generate a simple unique ID for local records
-const generateLocalId = () => `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+let dbPromise: Promise<IDBPDatabase<AccountingDB>> | null = null;
+let currentCompanyId: string | null = null;
 
-// Create a generic local API
+const getDb = (companyId: string): Promise<IDBPDatabase<AccountingDB>> => {
+  if (dbPromise && currentCompanyId === companyId) {
+    return dbPromise;
+  }
+  currentCompanyId = companyId;
+  const dbName = `accounting-db-${companyId}`;
+  dbPromise = openDB<AccountingDB>(dbName, 1, {
+    upgrade(db) {
+      const stores: (keyof AccountingDB)[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'notifications'];
+      stores.forEach(storeName => {
+        if (!db.objectStoreNames.contains(storeName)) {
+          db.createObjectStore(storeName, { keyPath: 'id' });
+        }
+      });
+    },
+  });
+  return dbPromise;
+};
+
+const getActiveDb = async () => {
+  if (!currentCompanyId) {
+    const storedCompany = localStorage.getItem('selectedCompany');
+    if (storedCompany) {
+      currentCompanyId = JSON.parse(storedCompany).id;
+    }
+  }
+  if (!currentCompanyId) {
+    throw new Error("No company selected. Cannot access local database.");
+  }
+  return getDb(currentCompanyId);
+};
+
 export const localApi = {
-  async get(storeName: StoreName) {
-    return (await dbPromise).getAll(storeName);
+  setCompanyId: (companyId: string | null) => {
+    if (companyId !== currentCompanyId) {
+      dbPromise = null; // Force re-initialization on next call
+      currentCompanyId = companyId;
+    }
   },
-  async post(storeName: StoreName, data: any) {
-    const id = generateLocalId();
-    const record = { ...data, id };
-    await (await dbPromise).put(storeName, record);
-    return record;
+  get: async (storeName: keyof AccountingDB, id?: string) => {
+    const db = await getActiveDb();
+    if (id) {
+      return db.get(storeName, id);
+    }
+    return db.getAll(storeName);
   },
-  async put(storeName: StoreName, id: string, data: any) {
-    const record = { ...data, id };
-    await (await dbPromise).put(storeName, record);
-    return record;
+  post: async (storeName: keyof AccountingDB, data: any) => {
+    const db = await getActiveDb();
+    const id = data.id || crypto.randomUUID();
+    const item = { ...data, id };
+    await db.put(storeName, item);
+    return item;
   },
-  async delete(storeName: StoreName, id: string) {
-    await (await dbPromise).delete(storeName, id);
+  put: async (storeName: keyof AccountingDB, id: string, data: any) => {
+    const db = await getActiveDb();
+    const item = { ...data, id };
+    await db.put(storeName, item);
+    return item;
+  },
+  delete: async (storeName: keyof AccountingDB, id: string) => {
+    const db = await getActiveDb();
+    await db.delete(storeName, id);
     return { id };
+  },
+  patch: async (storeName: keyof AccountingDB, id: string, data: Partial<any>) => {
+    const db = await getActiveDb();
+    const existing = await db.get(storeName, id);
+    if (!existing) throw new Error("Item not found");
+    const updated = { ...existing, ...data };
+    await db.put(storeName, updated);
+    return updated;
   },
 };

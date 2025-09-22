@@ -3,27 +3,17 @@ import { api } from '../api/api';
 import { jwtDecode, JwtPayload } from 'jwt-decode';
 
 interface User extends JwtPayload {
-  email: string;
-  name: string;
-}
-
-interface Company {
   id: string;
-  name: string;
-}
-
-interface Membership {
-  company: Company;
-  role: string;
+  email: string;
+  memberships: { companyId: string; companyName: string; role: string }[];
 }
 
 interface AuthContextType {
   user: User | null;
-  userMemberships: Membership[] | null;
-  selectedCompany: Company | null;
+  selectedCompany: { id: string; name: string } | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  selectCompany: (companyId: string) => void;
+  selectCompany: (company: { id: string; name: string }) => void;
   loading: boolean;
 }
 
@@ -31,26 +21,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [userMemberships, setUserMemberships] = useState<Membership[] | null>(null);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<{ id: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const companyId = localStorage.getItem('selectedCompanyId');
     if (token) {
       try {
         const decodedUser = jwtDecode<User>(token);
         setUser(decodedUser);
-        // We will fetch memberships on login, but we can try to restore from cache if needed
-        const cachedMemberships = localStorage.getItem('userMemberships');
-        if (cachedMemberships) {
-          const memberships = JSON.parse(cachedMemberships);
-          setUserMemberships(memberships);
-          if (companyId) {
-            const company = memberships.find((m: Membership) => m.company.id === companyId)?.company;
-            if (company) setSelectedCompany(company);
-          }
+        // Restore selected company if available
+        const storedCompany = localStorage.getItem('selectedCompany');
+        if (storedCompany) {
+          setSelectedCompany(JSON.parse(storedCompany));
+        } else if (decodedUser.memberships?.length === 1) {
+          // Auto-select if only one company
+          const company = { id: decodedUser.memberships[0].companyId, name: decodedUser.memberships[0].companyName };
+          setSelectedCompany(company);
+          localStorage.setItem('selectedCompany', JSON.stringify(company));
         }
       } catch (error) {
         console.error("Invalid token:", error);
@@ -64,19 +52,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       const response = await api.post('/auth/login', { email, password });
-      const { access_token, memberships } = response;
-      
+      const { access_token } = response;
       localStorage.setItem('token', access_token);
-      localStorage.setItem('userMemberships', JSON.stringify(memberships));
-
       const decodedUser = jwtDecode<User>(access_token);
       setUser(decodedUser);
-      setUserMemberships(memberships);
 
-      if (memberships.length === 1) {
-        selectCompany(memberships[0].company.id);
+      if (decodedUser.memberships?.length === 1) {
+        const company = { id: decodedUser.memberships[0].companyId, name: decodedUser.memberships[0].companyName };
+        selectCompany(company);
+      } else {
+        setSelectedCompany(null);
+        localStorage.removeItem('selectedCompany');
       }
-      
       setLoading(false);
     } catch (error) {
       setLoading(false);
@@ -84,26 +71,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const selectCompany = (companyId: string) => {
-    if (userMemberships) {
-      const company = userMemberships.find(m => m.company.id === companyId)?.company;
-      if (company) {
-        localStorage.setItem('selectedCompanyId', companyId);
-        setSelectedCompany(company);
-      }
-    }
+  const selectCompany = (company: { id: string; name: string }) => {
+    setSelectedCompany(company);
+    localStorage.setItem('selectedCompany', JSON.stringify(company));
+    // Set companyId for localApi
+    localApi.setCompanyId(company.id);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('selectedCompanyId');
-    localStorage.removeItem('userMemberships');
+    localStorage.removeItem('selectedCompany');
     setUser(null);
-    setUserMemberships(null);
     setSelectedCompany(null);
+    localApi.setCompanyId(null);
   };
 
-  const value = { user, userMemberships, selectedCompany, login, logout, selectCompany, loading };
+  const value = { user, selectedCompany, login, logout, selectCompany, loading };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
