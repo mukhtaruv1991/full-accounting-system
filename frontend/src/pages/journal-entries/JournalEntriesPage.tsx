@@ -1,127 +1,126 @@
-import { useEffect, useState } from 'react'; // إزالة React من هنا
-import { api } from '../../api/api';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { localApi } from '../../api/localApi';
 import JournalEntryForm from '../../components/journal-entries/JournalEntryForm';
+import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 
-interface Account {
-  id: string;
-  name: string;
-  code: string;
-}
+interface JournalEntry { id: string; date: string; description: string; debitAccountId: string; creditAccountId: string; amount: number; }
+interface Account { id: string; name: string; }
 
-interface JournalEntry {
-  id: string;
-  date: string;
-  description: string;
-  debitAccountId: string;
-  creditAccountId: string;
-  debitAmount: number;
-  creditAmount: number;
-}
-
-const JournalEntriesPage = () => {
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]); // لجلب الحسابات لاستخدامها في النموذج
+const JournalEntriesPage: React.FC = () => {
+  const { t } = useTranslation();
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+  const [isFormVisible, setIsFormVisible] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchJournalEntries();
-    fetchAccountsForForm();
+  const fetchEntries = useCallback(async () => {
+    try {
+      const data = await localApi.get('journal_entries');
+      setEntries(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch journal entries');
+    }
   }, []);
 
-  const fetchJournalEntries = async () => {
+  const fetchAccounts = useCallback(async () => {
     try {
-      const data = await api.get('/journal-entries');
-      setJournalEntries(data);
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  const fetchAccountsForForm = async () => {
-    try {
-      const data = await api.get('/accounts');
+      const data = await localApi.get('accounts');
       setAccounts(data);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to fetch accounts');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchEntries();
+    fetchAccounts();
+  }, [fetchEntries, fetchAccounts]);
 
   const handleSave = async (entryData: Omit<JournalEntry, 'id'>) => {
     try {
       if (editingEntry) {
-        await api.put(`/journal-entries/${editingEntry.id}`, entryData);
+        await localApi.put('journal_entries', editingEntry.id, entryData);
       } else {
-        await api.post('/journal-entries', entryData);
+        await localApi.post('journal_entries', entryData);
       }
+      setIsFormVisible(false);
       setEditingEntry(null);
-      fetchJournalEntries();
-    } catch (err: any) {
-      setError(err.message);
-    }
+      fetchEntries();
+    } catch (err: any) { setError(err.message); }
   };
 
   const handleEdit = (entry: JournalEntry) => {
     setEditingEntry(entry);
+    setIsFormVisible(true);
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await api.delete(`/journal-entries/${id}`);
-      fetchJournalEntries();
-    } catch (err: any) {
-      setError(err.message);
+    if (window.confirm(t('confirm_delete'))) {
+      try {
+        await localApi.delete('journal_entries', id);
+        fetchEntries();
+      } catch (err: any) { setError(err.message); }
     }
   };
 
+  const getAccountName = (accountId: string) => accounts.find(a => a.id === accountId)?.name || accountId;
+
   return (
-    <div className="container">
-      <h2>Journal Entries</h2>
-      {error && <p className="error-message">{error}</p>}
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" component="h1" gutterBottom>{t('journal_entries_management')}</Typography>
+      {error && <Typography color="error">{error}</Typography>}
 
-      <h3>{editingEntry ? 'Edit Journal Entry' : 'Add New Journal Entry'}</h3>
-      <JournalEntryForm
-        entry={editingEntry}
-        accounts={accounts}
-        onSave={handleSave}
-        onCancel={() => setEditingEntry(null)}
-      />
-
-      <h3>All Journal Entries</h3>
-      {journalEntries.length === 0 ? (
-        <p>No journal entries found.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th>Debit Account</th>
-              <th>Credit Account</th>
-              <th>Debit Amount</th>
-              <th>Credit Amount</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {journalEntries.map((entry) => (
-              <tr key={entry.id}>
-                <td>{new Date(entry.date).toLocaleDateString()}</td>
-                <td>{entry.description}</td>
-                <td>{accounts.find(acc => acc.id === entry.debitAccountId)?.name || entry.debitAccountId}</td>
-                <td>{accounts.find(acc => acc.id === entry.creditAccountId)?.name || entry.creditAccountId}</td>
-                <td>{entry.debitAmount.toFixed(2)}</td>
-                <td>{entry.creditAmount.toFixed(2)}</td>
-                <td>
-                  <button onClick={() => handleEdit(entry)}>Edit</button>
-                  <button onClick={() => handleDelete(entry.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {!isFormVisible && (
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditingEntry(null); setIsFormVisible(true); }} sx={{ mb: 2 }}>
+          {t('add_new_journal_entry')}
+        </Button>
       )}
-    </div>
+
+      {isFormVisible && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6">{editingEntry ? t('edit_journal_entry') : t('add_new_journal_entry')}</Typography>
+          <JournalEntryForm entry={editingEntry} accounts={accounts} onSave={handleSave} onCancel={() => setIsFormVisible(false)} />
+        </Box>
+      )}
+
+      <Paper>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>{t('date')}</TableCell>
+                <TableCell>{t('description')}</TableCell>
+                <TableCell>{t('debit_account')}</TableCell>
+                <TableCell>{t('credit_account')}</TableCell>
+                <TableCell align="right">{t('debit_amount')}</TableCell>
+                <TableCell align="right">{t('actions')}</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {entries.map((entry) => (
+                <TableRow key={entry.id} hover>
+                  <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{entry.description}</TableCell>
+                  <TableCell>{getAccountName(entry.debitAccountId)}</TableCell>
+                  <TableCell>{getAccountName(entry.creditAccountId)}</TableCell>
+                  <TableCell align="right">{entry.amount.toFixed(2)}</TableCell>
+                  <TableCell align="right">
+                    <IconButton onClick={() => handleEdit(entry)}><EditIcon /></IconButton>
+                    <IconButton onClick={() => handleDelete(entry.id)} color="error"><DeleteIcon /></IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {entries.length === 0 && <Typography sx={{ p: 2, textAlign: 'center' }}>{t('no_journal_entries_found')}</Typography>}
+      </Paper>
+    </Box>
   );
 };
 
