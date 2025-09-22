@@ -8,16 +8,22 @@ dotenv.config();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // --- CORS Configuration Update ---
+  // Explicitly allowing the frontend origin
   app.enableCors({
-    origin: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: [
+      'http://localhost:3000', // For local development
+      'https://full-accounting-frontend.onrender.com' // Your deployed frontend
+    ],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
+  // --- End of Update ---
 
   app.useGlobalPipes(new ValidationPipe());
   
-  // Listen on localhost, which will be forwarded by adb
-  await app.listen(5000);
-  console.log(`🚀 Backend application is running on: http://localhost:5000`);
+  const port = process.env.PORT || 5000;
+  await app.listen(port);
+  console.log(`🚀 Backend application is running on port: ${port}`);
 }
 bootstrap();
