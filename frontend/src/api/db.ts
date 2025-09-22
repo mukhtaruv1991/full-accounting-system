@@ -11,6 +11,9 @@ interface AccountingDB extends DBSchema {
   journal_entries: { key: string; value: any; };
 }
 
+// A type for the names of our object stores
+type StoreName = keyof AccountingDB;
+
 // Open the database
 export const dbPromise = openDB<AccountingDB>('full-accounting-db', 1, {
   upgrade(db: IDBPDatabase<AccountingDB>) {
