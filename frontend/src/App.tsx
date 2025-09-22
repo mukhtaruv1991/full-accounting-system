@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
-import PrivateRoute from './components/PrivateRoute';
+import PrivateRoute from './components/PrivateRoute'; // We import it from its file
 import { AuthProvider, useAuth } from './context/AuthContext';
 import CompanySelectionPage from './pages/CompanySelectionPage';
 
@@ -44,22 +44,19 @@ const AppRouter: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (loading) return; // Don't do anything while auth state is loading
+    if (loading) return;
 
     if (user) {
       if (!selectedCompany) {
-        // If user is logged in but has no company selected, force to selection page
         if (memberships.length > 0 && location.pathname !== '/select-company') {
           navigate('/select-company', { replace: true });
         }
       } else {
-        // If user has a company selected, but is on a public page, redirect to dashboard
         if (['/login', '/register', '/select-company'].includes(location.pathname)) {
           navigate('/dashboard', { replace: true });
         }
       }
     } else {
-      // If user is not logged in, they can only be on login or register
       if (!['/login', '/register'].includes(location.pathname)) {
         navigate('/login', { replace: true });
       }
@@ -74,9 +71,11 @@ const AppRouter: React.FC = () => {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/select-company" element={<CompanySelectionPage />} />
+      
+      {/* This route is now correctly handled by the PrivateRoute component */}
+      <Route path="/select-company" element={<PrivateRoute><CompanySelectionPage /></PrivateRoute>} />
 
-      {/* All main app routes are now protected by a single PrivateRoute */}
+      {/* All main app routes are protected */}
       <Route path="/" element={<PrivateRoute />}>
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="accounts" element={<AccountsPage />} />
@@ -87,31 +86,16 @@ const AppRouter: React.FC = () => {
         <Route path="customers" element={<CustomersPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />
       </Route>
+      
+      {/* Fallback route */}
+      <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
     </Routes>
   );
 };
 
-// Simplified PrivateRoute
-const PrivateRoute: React.FC = () => {
-  const { user, selectedCompany, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user || !selectedCompany) {
-    // The logic in AppRouter should prevent this, but as a fallback:
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // This is a placeholder for the nested routes
-  const { Outlet } = require('react-router-dom');
-  return <Outlet />;
-};
-
-
-function App() {
+// The simplified PrivateRoute is now only in its own file.
+// We use Outlet for nested routes.
+const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
@@ -125,7 +109,12 @@ function App() {
             <ul style={{ listStyleType: 'none', padding: 0 }}>
               <li><Link to="/dashboard">Dashboard</Link></li>
               <li><Link to="/accounts">Accounts</Link></li>
-              {/* ... other links */}
+              <li><Link to="/journal-entries">Journal Entries</Link></li>
+              <li><Link to="/items">Items</Link></li>
+              <li><Link to="/sales">Sales</Link></li>
+              <li><Link to="/purchases">Purchases</Link></li>
+              <li><Link to="/customers">Customers</Link></li>
+              <li><Link to="/suppliers">Suppliers</Link></li>
             </ul>
           </aside>
           <main style={{ flexGrow: 1, paddingLeft: '20px' }}>
