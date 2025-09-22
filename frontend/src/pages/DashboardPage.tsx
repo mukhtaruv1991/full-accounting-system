@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { localApi } from '../api/localApi';
-import { Box, Typography, Grid, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
+import { Box, Typography, Grid, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, CircularProgress } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, startOfMonth } from 'date-fns';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
@@ -16,8 +16,8 @@ interface SummaryCardProps {
   icon: React.ReactElement;
 }
 interface Invoice { id: string; date: string; totalAmount: number; type: 'sale' | 'purchase'; }
-interface JournalEntry { id: string; date: string; description: string; amount: number; }
-type Activity = (Invoice | JournalEntry) & { activityType: 'Invoice' | 'Journal Entry' };
+interface JournalEntry { id: string; date: string; description: string; debitAmount: number; } // Use debitAmount for consistency
+type Activity = (Invoice | JournalEntry) & { activityType: 'Invoice' | 'Journal Entry', amount: number };
 
 const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon }) => (
   <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', height: '100%' }}>
@@ -80,9 +80,9 @@ const DashboardPage: React.FC = () => {
 
         // Process recent activities
         const allActivities: Activity[] = [
-          ...sales.map((inv: Invoice) => ({ ...inv, activityType: 'Invoice' as const })),
-          ...purchases.map((inv: Invoice) => ({ ...inv, activityType: 'Invoice' as const })),
-          ...journalEntries.map((je: JournalEntry) => ({ ...je, activityType: 'Journal Entry' as const, totalAmount: je.amount }))
+          ...sales.map((inv: Invoice) => ({ ...inv, activityType: 'Invoice' as const, amount: inv.totalAmount })),
+          ...purchases.map((inv: Invoice) => ({ ...inv, activityType: 'Invoice' as const, amount: inv.totalAmount })),
+          ...journalEntries.map((je: JournalEntry) => ({ ...je, activityType: 'Journal Entry' as const, amount: je.debitAmount }))
         ];
         const sortedActivities = allActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setRecentActivities(sortedActivities.slice(0, 5));
@@ -98,7 +98,7 @@ const DashboardPage: React.FC = () => {
   }, []);
 
   if (loading) {
-    return <Typography>{t('loading')}...</Typography>;
+    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}><CircularProgress /></Box>;
   }
 
   return (
@@ -125,8 +125,8 @@ const DashboardPage: React.FC = () => {
         <Grid item xs={12} md={8}>
           <Paper sx={{ p: 2, height: '400px' }}>
             <Typography variant="h6" gutterBottom>Monthly Performance</Typography>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 20 }}>
+            <ResponsiveContainer width="100%" height="90%">
+              <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -141,7 +141,7 @@ const DashboardPage: React.FC = () => {
 
         {/* Recent Activities */}
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, height: '400px' }}>
+          <Paper sx={{ p: 2, height: '400px', overflowY: 'auto' }}>
             <Typography variant="h6" gutterBottom>Recent Activities</Typography>
             <TableContainer>
               <Table size="small">
@@ -149,11 +149,13 @@ const DashboardPage: React.FC = () => {
                   {recentActivities.map((activity) => (
                     <TableRow key={activity.id}>
                       <TableCell>
-                        <Typography variant="body2">{activity.activityType === 'Invoice' ? (activity as Invoice).type : 'Journal'}</Typography>
+                        <Typography variant="body2">
+                          {activity.activityType === 'Invoice' ? `Invoice (${(activity as Invoice).type})` : 'Journal Entry'}
+                        </Typography>
                         <Typography variant="caption" color="text.secondary">{format(new Date(activity.date), 'PP')}</Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" fontWeight="bold">${activity.totalAmount.toFixed(2)}</Typography>
+                        <Typography variant="body2" fontWeight="bold">${activity.amount.toFixed(2)}</Typography>
                       </TableCell>
                     </TableRow>
                   ))}
