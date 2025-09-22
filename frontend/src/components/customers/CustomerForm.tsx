@@ -1,36 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Button } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import { TextField, Button, Grid } from '@mui/material';
 
-interface Customer {
-  id?: string;
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-}
-
-interface CustomerFormProps {
-  customer: Customer | null;
-  onSave: (customerData: Omit<Customer, 'id'>) => void;
-  onCancel: () => void;
-}
+interface Customer { id?: string; name: string; email?: string | null; phone?: string | null; }
+interface CustomerFormProps { customer: Customer | null; onSave: (data: Omit<Customer, 'id'>) => void; onCancel: () => void; }
 
 const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSave, onCancel }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
 
   useEffect(() => {
     if (customer) {
-      setFormData({
-        name: customer.name || '',
-        email: customer.email || '',
-        phone: customer.phone || '',
-      });
+      setFormData({ name: customer.name, email: customer.email || '', phone: customer.phone || '' });
     } else {
       setFormData({ name: '', email: '', phone: '' });
     }
   }, [customer]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -39,38 +28,17 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSave, onCancel 
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <TextField
-        label="Customer Name"
-        name="name"
-        value={formData.name}
-        onChange={handleChange}
-        required
-        variant="outlined"
-        fullWidth
-      />
-      <TextField
-        label="Email (Optional)"
-        name="email"
-        type="email"
-        value={formData.email}
-        onChange={handleChange}
-        variant="outlined"
-        fullWidth
-      />
-      <TextField
-        label="Phone (Optional)"
-        name="phone"
-        value={formData.phone}
-        onChange={handleChange}
-        variant="outlined"
-        fullWidth
-      />
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
-        <Button onClick={onCancel} variant="outlined">Cancel</Button>
-        <Button type="submit" variant="contained">Save</Button>
-      </Box>
-    </Box>
+    <form onSubmit={handleSubmit}>
+      <Grid container spacing={2}>
+        <Grid item xs={12}><TextField name="name" label={t('name')} value={formData.name} onChange={handleChange} fullWidth required /></Grid>
+        <Grid item xs={12} sm={6}><TextField name="email" label={t('email')} type="email" value={formData.email} onChange={handleChange} fullWidth /></Grid>
+        <Grid item xs={12} sm={6}><TextField name="phone" label={t('phone')} value={formData.phone} onChange={handleChange} fullWidth /></Grid>
+        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <Button onClick={onCancel}>{t('cancel')}</Button>
+          <Button type="submit" variant="contained">{t('save')}</Button>
+        </Grid>
+      </Grid>
+    </form>
   );
 };
 
