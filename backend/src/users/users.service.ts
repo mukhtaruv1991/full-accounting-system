@@ -19,24 +19,24 @@ export class UsersService {
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
     if (companyName) {
-      // This is an admin registering a new company
       const company = await this.prisma.company.create({
-        data: {
-          name: companyName,
-        },
+        data: { name: companyName },
       });
 
+      // Correctly connect the user to the company
       return this.prisma.user.create({
         data: {
-          ...data,
+          email: data.email,
           password: hashedPassword,
-          companyId: company.id,
-          role: 'admin', // The first user of a company is an admin
+          role: 'ADMIN', // Set a default role, e.g., 'ADMIN'
+          company: {
+            connect: { id: company.id },
+          },
         },
       });
     }
 
-    // This case can be used later for inviting users to an existing company
+    // This part is for creating a user without a company, if applicable
     return this.prisma.user.create({
       data: {
         ...data,

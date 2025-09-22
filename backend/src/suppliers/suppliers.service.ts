@@ -6,7 +6,7 @@ import { Prisma, Supplier } from '@prisma/client';
 export class SuppliersService {
   constructor(private prisma: PrismaService) {}
 
-  create(data: Prisma.SupplierCreateInput) {
+  create(data: Prisma.SupplierUncheckedCreateInput) {
     return this.prisma.supplier.create({ data });
   }
 
@@ -19,6 +19,7 @@ export class SuppliersService {
       where: { id, companyId },
     });
     if (!supplier) {
+      // Corrected template literal syntax
       throw new NotFoundException(`Supplier with ID ${id} not found for this company.`);
     }
     return supplier;

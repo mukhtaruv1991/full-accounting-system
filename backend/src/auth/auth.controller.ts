@@ -3,11 +3,10 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { Prisma } from '@prisma/client';
 
-// Define a DTO for registration to include companyName
-class RegisterDto implements Prisma.UserCreateInput {
+class RegisterDto {
   email: string;
   password: string;
-  name: string;
+  name: string; // This property is kept for the DTO, but not passed to the service
   companyName: string;
 }
 
@@ -29,10 +28,9 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
-    const { name, email, password, companyName } = registerDto;
-    // We pass the companyName separately to the service
-    const user = await this.usersService.create({ name, email, password }, companyName);
-    // Do not log the user in automatically, let them log in after registering.
+    const { email, password, companyName } = registerDto;
+    // The 'name' property is no longer passed to the create method
+    const user = await this.usersService.create({ email, password }, companyName);
     return { message: 'Registration successful. Please log in.' };
   }
 }

@@ -10,8 +10,12 @@ export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
 
   @Post()
-  create(@Body() createSupplierDto: Prisma.SupplierCreateInput, @CurrentUser() user: any) {
-    return this.suppliersService.create({ ...createSupplierDto, companyId: user.companyId });
+  create(@Body() createSupplierDto: Prisma.SupplierCreateWithoutCompanyInput, @CurrentUser() user: any) {
+    const dataWithCompany: Prisma.SupplierUncheckedCreateInput = {
+       ...createSupplierDto,
+       companyId: user.companyId 
+    };
+    return this.suppliersService.create(dataWithCompany);
   }
 
   @Get()
