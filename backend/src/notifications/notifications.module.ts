@@ -1,12 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
-import { NotificationsController } from './notifications.controller';
-import { PrismaService } from '../prisma.service';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  providers: [NotificationsService, NotificationsGateway, PrismaService],
-  controllers: [NotificationsController],
-  exports: [NotificationsService], // Export service to be used by other modules
+  imports: [forwardRef(() => UsersModule)],
+  providers: [NotificationsService, NotificationsGateway],
+  exports: [NotificationsGateway, NotificationsService], // Export service as well
 })
 export class NotificationsModule {}

@@ -1,105 +1,67 @@
-import { openDB, IDBPDatabase } from 'idb';
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
-// Define the shape of our database
-export interface AccountingDB {
-  accounts: { id: string; name: string; code: string; type: string; companyId: string; };
-  customers: { id: string; name: string; accountId: string; companyId: string; };
-  suppliers: { id: string; name: string; accountId: string; companyId: string; };
-  items: { id: string; name: string; quantity: number; companyId: string; };
-  sales: { id: string; date: string; contactId: string; total: number; items: any[]; companyId: string; };
-  purchases: { id: string; date: string; contactId: string; total: number; items: any[]; companyId: string; };
-  journal_entries: { id: string; date: string; description: string; amount: number; debitAccountId: string; creditAccountId: string; companyId: string; };
-  notifications: { id: string; message: string; isRead: boolean; createdAt: string; companyId: string; };
+// Define the database schema
+export interface AccountingDB extends DBSchema {
+  accounts: { key: string; value: any; };
+  customers: { key: string; value: any; };
+  suppliers: { key: string; value: any; };
+  items: { key: string; value: any; };
+  sales: { key: string; value: any; };
+  purchases: { key: string; value: any; };
+  journal_entries: { key: string; value: any; };
+  friends: { key: string; value: any; }; // New store for synced contacts
 }
 
-let dbPromise: Promise<IDBPDatabase<AccountingDB>> | null = null;
-let currentCompanyId: string | null = null;
+class LocalApi {
+  private dbNamePrefix = 'accounting-app-';
+  private companyId: string | null = 'default'; // Default to a local-only DB
+  private dbPromise: Promise<IDBPDatabase<AccountingDB>> | null = null;
 
-const getDb = (companyId: string): Promise<IDBPDatabase<AccountingDB>> => {
-  if (dbPromise && currentCompanyId === companyId) {
-    return dbPromise;
+  constructor() {
+    this.initDb();
   }
-  currentCompanyId = companyId;
-  const dbName = `accounting-db-${companyId}`;
-  dbPromise = openDB<AccountingDB>(dbName, 1, {
-    upgrade(db) {
-      const stores: (keyof AccountingDB)[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'notifications'];
-      stores.forEach(storeName => {
-        if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, { keyPath: 'id' });
-        }
+
+  private initDb() {
+    if (typeof window !== 'undefined' && this.companyId) {
+      const dbName = `${this.dbNamePrefix}${this.companyId}`;
+      this.dbPromise = openDB<AccountingDB>(dbName, 1, {
+        upgrade(db) {
+          const stores: (keyof AccountingDB)[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
+          stores.forEach(storeName => {
+            if (!db.objectStoreNames.contains(storeName)) {
+              db.createObjectStore(storeName, { keyPath: 'id' });
+            }
+          });
+        },
       });
-    },
-  });
-  return dbPromise;
-};
-
-const getActiveDb = async () => {
-  if (!currentCompanyId) {
-    const storedCompany = localStorage.getItem('selectedCompany');
-    if (storedCompany) {
-      currentCompanyId = JSON.parse(storedCompany).id;
     }
   }
-  if (!currentCompanyId) {
-    // For local-first, we can default to a 'local' companyId
-    currentCompanyId = 'local';
-  }
-  return getDb(currentCompanyId);
-};
 
-export const localApi = {
-  setCompanyId: (companyId: string | null) => {
-    if (companyId !== currentCompanyId) {
-      dbPromise = null;
-      currentCompanyId = companyId;
+  setCompanyId(companyId: string | null) {
+    if (this.companyId !== companyId) {
+      this.companyId = companyId || 'default';
+      this.initDb(); // Re-initialize the database connection for the new company
     }
-  },
-  get: async (storeName: keyof AccountingDB, id?: string) => {
-    const db = await getActiveDb();
-    if (id) {
-      return db.get(storeName, id);
+  }
+
+  async getDb(companyId?: string): Promise<IDBPDatabase<AccountingDB>> {
+    if (companyId && this.companyId !== companyId) {
+      this.setCompanyId(companyId);
     }
-    return db.getAll(storeName);
-  },
-  post: async (storeName: keyof AccountingDB, data: any) => {
-    const db = await getActiveDb();
-    const id = data.id || crypto.randomUUID();
-    const item = { ...data, id, companyId: currentCompanyId };
-    await db.put(storeName, item);
-    return item;
-  },
-  put: async (storeName: keyof AccountingDB, id: string, data: any) => {
-    const db = await getActiveDb();
-    const item = { ...data, id, companyId: currentCompanyId };
-    await db.put(storeName, item);
-    return item;
-  },
-  delete: async (storeName: keyof AccountingDB, id: string) => {
-    const db = await getActiveDb();
-    await db.delete(storeName, id);
-    return { id };
-  },
-  patch: async (storeName: keyof AccountingDB, id: string, data: Partial<any>) => {
-    const db = await getActiveDb();
-    const existing = await db.get(storeName, id);
-    if (!existing) throw new Error("Item not found");
-    const updated = { ...existing, ...data };
-    await db.put(storeName, updated);
-    return updated;
-  },
-  // New transactional method for complex operations
-  performTransaction: async (actions: (tx: any) => Promise<void>) => {
-    const db = await getActiveDb();
-    const storeNames = db.objectStoreNames;
-    const tx = db.transaction(storeNames, 'readwrite');
-    try {
-      await actions(tx);
-      await tx.done;
-    } catch (error) {
-      tx.abort();
-      console.error("Transaction failed:", error);
-      throw error;
+    if (!this.dbPromise) {
+      this.initDb();
+      if (!this.dbPromise) {
+        throw new Error("Database could not be initialized.");
+      }
     }
-  },
-};
+    return this.dbPromise;
+  }
+
+  // Generic methods remain the same
+  async getAll(storeName: keyof AccountingDB) { const db = await this.getDb(); return db.getAll(storeName); }
+  async get(storeName: keyof AccountingDB, key: string) { const db = await this.getDb(); return db.get(storeName, key); }
+  async put(storeName: keyof AccountingDB, value: any) { const db = await this.getDb(); return db.put(storeName, value); }
+  async delete(storeName: keyof AccountingDB, key: string) { const db = await this.getDb(); return db.delete(storeName, key); }
+}
+
+export const localApi = new LocalApi();
