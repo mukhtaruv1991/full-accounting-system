@@ -49,7 +49,6 @@ const RequestsPage: React.FC = () => {
   const handleRequest = async (requestId: string, status: 'approved' | 'rejected') => {
     try {
       await api.put(`/company/join-requests/${requestId}`, { status });
-      // The list will update via socket event, but we can also optimistically update
       setRequests(prev => prev.filter(r => r.id !== requestId));
     } catch (err: any) {
       setError(err.message || `Failed to ${status} request.`);
@@ -57,7 +56,7 @@ const RequestsPage: React.FC = () => {
   };
 
   if (loading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress />;
+    return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
   }
 
   if (error) {
@@ -89,23 +88,25 @@ const RequestsPage: React.FC = () => {
                   <TableCell>{request.user.email}</TableCell>
                   <TableCell><Chip label={request.role} size="small" /></TableCell>
                   <TableCell align="center">
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="small"
-                      sx={{ mr: 1 }}
-                      onClick={() => handleRequest(request.id, 'approved')}
-                    >
-                      {t('approve')}
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="error"
-                      size="small"
-                      onClick={() => handleRequest(request.id, 'rejected')}
-                    >
-                      {t('reject')}
-                    </Button>
+                    <Box>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        sx={{ mr: 1 }}
+                        onClick={() => handleRequest(request.id, 'approved')}
+                      >
+                        {t('approve')}
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        onClick={() => handleRequest(request.id, 'rejected')}
+                      >
+                        {t('reject')}
+                      </Button>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}

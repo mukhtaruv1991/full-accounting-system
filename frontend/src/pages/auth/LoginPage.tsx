@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Container, Paper, Typography, TextField, Button, Box, Alert } from '@mui/material';
+import { Container, Paper, Typography, TextField, Button, Box, Alert, Grid } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 const LoginPage: React.FC = () => {

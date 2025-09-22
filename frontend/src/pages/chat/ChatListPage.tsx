@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { localApi } from '../../api/localApi';
-import { List, ListItem, ListItemAvatar, Avatar, ListItemText, Typography, Divider, Paper, Badge } from '@mui/material';
+import { List, ListItem, ListItemAvatar, Avatar, ListItemText, Typography, Divider, Paper, Badge, Box } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 interface Conversation {
@@ -27,10 +26,7 @@ const ChatListPage: React.FC = () => {
   useEffect(() => {
     const fetchConversations = async () => {
       if (!user) return;
-      // This is a placeholder. In a real app, you'd fetch this from localApi
-      // which would be populated by the server.
       const mockConversations: Conversation[] = [
-        // Example data
         { id: 'conv1', otherUser: { id: 'user2', name: 'Ali Ahmed' }, lastMessage: { content: 'Hello there!', timestamp: new Date().toISOString() }, unreadCount: 2 },
         { id: 'conv2', otherUser: { id: 'user3', name: 'Fatima Saleh' }, lastMessage: { content: 'See you tomorrow.', timestamp: new Date(Date.now() - 86400000).toISOString() }, unreadCount: 0 },
       ];
