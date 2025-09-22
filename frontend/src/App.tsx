@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Outlet, Navigate } from 'react-router-dom';
 
 // Import pages directly
 import DashboardPage from './pages/DashboardPage';
@@ -10,7 +10,10 @@ import SalesPage from './pages/sales/SalesPage';
 import PurchasesPage from './pages/purchases/PurchasesPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
-// import SettingsPage from './pages/SettingsPage'; // Will be added later
+// import SettingsPage from './pages/SettingsPage'; // We will create this later
+
+// A simple placeholder for the PrivateRoute component
+const PrivateRoute: React.FC = () => <Outlet />;
 
 function App() {
   return (
@@ -35,6 +38,7 @@ function App() {
         </aside>
         <main style={{ flexGrow: 1, paddingLeft: '20px' }}>
           <Routes>
+            {/* All routes are public for now in the local-first model */}
             <Route path="/" element={<DashboardPage />} />
             <Route path="/accounts" element={<AccountsPage />} />
             <Route path="/journal-entries" element={<JournalEntriesPage />} />
