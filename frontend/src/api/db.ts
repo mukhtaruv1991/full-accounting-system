@@ -1,4 +1,4 @@
-import { openDB, DBSchema } from 'idb';
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
 // Define the database schema
 interface AccountingDB extends DBSchema {
@@ -16,11 +16,12 @@ type StoreName = keyof AccountingDB;
 
 // Open the database
 export const dbPromise = openDB<AccountingDB>('full-accounting-db', 1, {
-  upgrade(db) {
+  upgrade(db: IDBPDatabase<AccountingDB>) {
     const stores: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries'];
     
     stores.forEach(storeName => {
-      // The fix is here: We ensure storeName is treated as a valid store name.
+      // The definitive fix: Explicitly check if the store name is a valid key.
+      // This satisfies the strict type checking during the build process.
       if (!db.objectStoreNames.contains(storeName)) {
         db.createObjectStore(storeName, { keyPath: 'id' });
       }
