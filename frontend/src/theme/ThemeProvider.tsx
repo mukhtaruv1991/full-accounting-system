@@ -1,16 +1,17 @@
-import React, { createContext, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useState, useMemo, ReactNode, useContext } from 'react';
 import { createTheme, ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 type ThemeMode = 'light' | 'dark';
 
 interface ThemeContextType {
-  toggleTheme: () => void;
+  toggleColorMode: () => void; // Changed name for clarity
   mode: ThemeMode;
 }
 
-export const ThemeContext = createContext<ThemeContextType>({
-  toggleTheme: () => {},
+// Renamed for clarity to avoid conflict with MUI's ThemeContext
+export const AppThemeContext = createContext<ThemeContextType>({
+  toggleColorMode: () => {},
   mode: 'light',
 });
 
@@ -21,6 +22,16 @@ interface AppThemeProviderProps {
 export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) => {
   const [mode, setMode] = useState<ThemeMode>('light');
   const { i18n } = useTranslation();
+
+  const colorMode = useMemo(
+    () => ({
+      toggleColorMode: () => {
+        setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+      },
+      mode,
+    }),
+    [mode],
+  );
 
   const theme = useMemo(() => createTheme({
     direction: i18n.dir(),
@@ -42,16 +53,15 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
     },
   }), [mode, i18n.dir()]);
 
-  const toggleTheme = () => {
-    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
-  };
-
   return (
-    <ThemeContext.Provider value={{ toggleTheme, mode }}>
+    <AppThemeContext.Provider value={colorMode}>
       <MuiThemeProvider theme={theme}>
         <CssBaseline />
         {children}
       </MuiThemeProvider>
-    </ThemeContext.Provider>
+    </AppThemeContext.Provider>
   );
 };
+
+// This is the custom hook that was missing
+export const useColorMode = () => useContext(AppThemeContext);
