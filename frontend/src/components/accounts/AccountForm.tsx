@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Box, TextField, Button, Select, MenuItem, FormControl, InputLabel, Checkbox, FormControlLabel } from '@mui/material';
 
 interface Account {
-  id?: string; // Optional for new accounts
+  id?: string;
   name: string;
   code: string;
   type: 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
@@ -17,71 +18,95 @@ interface AccountFormProps {
 }
 
 const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) => {
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
-  const [type, setType] = useState<Account['type']>('Asset'); // Default type
-  const [parentCode, setParentCode] = useState('');
-  const [description, setDescription] = useState('');
-  const [isDebit, setIsDebit] = useState(true);
+  const [formData, setFormData] = useState<Omit<Account, 'id'>>({
+    name: '',
+    code: '',
+    type: 'Asset',
+    parentCode: '',
+    description: '',
+    isDebit: true,
+  });
 
   useEffect(() => {
     if (account) {
-      setName(account.name || '');
-      setCode(account.code || '');
-      setType(account.type || 'Asset');
-      setParentCode(account.parentCode || '');
-      setDescription(account.description || '');
-      setIsDebit(account.isDebit !== undefined ? account.isDebit : true);
+      setFormData({
+        name: account.name || '',
+        code: account.code || '',
+        type: account.type || 'Asset',
+        parentCode: account.parentCode || '',
+        description: account.description || '',
+        isDebit: account.isDebit !== undefined ? account.isDebit : true,
+      });
     } else {
-      setName('');
-      setCode('');
-      setType('Asset');
-      setParentCode('');
-      setDescription('');
-      setIsDebit(true);
+      // Reset form for new account
+      setFormData({
+        name: '',
+        code: '',
+        type: 'Asset',
+        parentCode: '',
+        description: '',
+        isDebit: true,
+      });
     }
   }, [account]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+    const { name, value, type, checked } = e.target as HTMLInputElement;
+    setFormData(prev => ({
+      ...prev,
+      [name as string]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ name, code, type, parentCode, description, isDebit });
+    onSave(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div>
-        <label>Name:</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-      </div>
-      <div>
-        <label>Code:</label>
-        <input type="text" value={code} onChange={(e) => setCode(e.target.value)} required />
-      </div>
-      <div>
-        <label>Type:</label>
-        <select value={type} onChange={(e) => setType(e.target.value as Account['type'])}>
-          <option value="Asset">Asset</option>
-          <option value="Liability">Liability</option>
-          <option value="Equity">Equity</option>
-          <option value="Revenue">Revenue</option>
-          <option value="Expense">Expense</option>
-        </select>
-      </div>
-      <div>
-        <label>Parent Code (optional):</label>
-        <input type="text" value={parentCode} onChange={(e) => setParentCode(e.target.value)} />
-      </div>
-      <div>
-        <label>Description (optional):</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)}></textarea>
-      </div>
-      <div>
-        <label>Is Debit:</label>
-        <input type="checkbox" checked={isDebit} onChange={(e) => setIsDebit(e.target.checked)} />
-      </div>
-      <button type="submit">Save</button>
-      {account && <button type="button" onClick={onCancel}>Cancel</button>}
-    </form>
+    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+      <TextField
+        label="Account Name"
+        name="name"
+        value={formData.name}
+        onChange={handleChange}
+        required
+        variant="outlined"
+        fullWidth
+      />
+      <TextField
+        label="Account Code"
+        name="code"
+        value={formData.code}
+        onChange={handleChange}
+        required
+        variant="outlined"
+        fullWidth
+      />
+      <FormControl fullWidth variant="outlined">
+        <InputLabel>Type</InputLabel>
+        <Select
+          label="Type"
+          name="type"
+          value={formData.type}
+          onChange={handleChange}
+        >
+          <MenuItem value="Asset">Asset</MenuItem>
+          <MenuItem value="Liability">Liability</MenuItem>
+          <MenuItem value="Equity">Equity</MenuItem>
+          <MenuItem value="Revenue">Revenue</MenuItem>
+          <MenuItem value="Expense">Expense</MenuItem>
+        </Select>
+      </FormControl>
+      <FormControlLabel
+        control={<Checkbox checked={formData.isDebit} onChange={handleChange} name="isDebit" />}
+        label="Is Debit Nature"
+      />
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+        <Button onClick={onCancel} variant="outlined">Cancel</Button>
+        <Button type="submit" variant="contained">Save</Button>
+      </Box>
+    </Box>
   );
 };
 

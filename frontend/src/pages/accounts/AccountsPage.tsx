@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { localApi } from '../../api/localApi';
 import AccountForm from '../../components/accounts/AccountForm';
+import {
+  Box, Typography, Button, Paper, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, IconButton, Alert
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 
 interface Account {
   id: string;
@@ -59,58 +66,78 @@ const AccountsPage: React.FC = () => {
   };
 
   return (
-    <div>
-      <h2>Accounts Management (Local)</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Accounts Management (Local)
+      </Typography>
+
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       {!isFormVisible && (
-        <button onClick={() => { setEditingAccount(null); setIsFormVisible(true); }} style={{ marginBottom: '1rem' }}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => { setEditingAccount(null); setIsFormVisible(true); }}
+          sx={{ mb: 2 }}
+        >
           Add New Account
-        </button>
+        </Button>
       )}
 
       {isFormVisible && (
-        <div>
-          <h3>{editingAccount ? 'Edit Account' : 'Add New Account'}</h3>
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            {editingAccount ? 'Edit Account' : 'Add New Account'}
+          </Typography>
           <AccountForm
             account={editingAccount}
             onSave={handleSave}
             onCancel={() => setIsFormVisible(false)}
           />
-        </div>
+        </Paper>
       )}
 
-      <hr style={{ margin: '2rem 0' }} />
-
-      <h3>All Accounts</h3>
-      {accounts.length === 0 ? (
-        <p>No accounts found. Add one to get started.</p>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Code</th>
-              <th>Type</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.map((account) => (
-              <tr key={account.id}>
-                <td>{account.name}</td>
-                <td>{account.code}</td>
-                <td>{account.type}</td>
-                <td>
-                  <button onClick={() => setEditingAccount(account)}>Edit</button>
-                  <button onClick={() => handleDelete(account.id)} style={{ marginLeft: '5px' }}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+      <Typography variant="h5" component="h2" gutterBottom>
+        All Accounts
+      </Typography>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Code</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {accounts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} align="center">
+                  No accounts found. Add one to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              accounts.map((account) => (
+                <TableRow key={account.id}>
+                  <TableCell>{account.name}</TableCell>
+                  <TableCell>{account.code}</TableCell>
+                  <TableCell>{account.type}</TableCell>
+                  <TableCell align="right">
+                    <IconButton onClick={() => { setEditingAccount(account); setIsFormVisible(true); }} color="primary">
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton onClick={() => handleDelete(account.id)} color="error">
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 };
 
