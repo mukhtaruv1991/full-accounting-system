@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Box, TextField, Button } from '@mui/material';
 
 interface Customer {
   id?: string;
@@ -14,46 +15,62 @@ interface CustomerFormProps {
 }
 
 const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSave, onCancel }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
 
   useEffect(() => {
     if (customer) {
-      setName(customer.name || '');
-      setEmail(customer.email || '');
-      setPhone(customer.phone || '');
+      setFormData({
+        name: customer.name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+      });
     } else {
-      setName('');
-      setEmail('');
-      setPhone('');
+      setFormData({ name: '', email: '', phone: '' });
     }
   }, [customer]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ name, email, phone });
+    onSave(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid #eee', borderRadius: '8px' }}>
-      <div style={{ marginBottom: '1rem' }}>
-        <label>Name:</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-      </div>
-      <div style={{ marginBottom: '1rem' }}>
-        <label>Email (optional):</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      </div>
-      <div style={{ marginBottom: '1rem' }}>
-        <label>Phone (optional):</label>
-        <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} />
-      </div>
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        <button type="submit">Save</button>
-        <button type="button" onClick={onCancel}>Cancel</button>
-      </div>
-    </form>
+    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <TextField
+        label="Customer Name"
+        name="name"
+        value={formData.name}
+        onChange={handleChange}
+        required
+        variant="outlined"
+        fullWidth
+      />
+      <TextField
+        label="Email (Optional)"
+        name="email"
+        type="email"
+        value={formData.email}
+        onChange={handleChange}
+        variant="outlined"
+        fullWidth
+      />
+      <TextField
+        label="Phone (Optional)"
+        name="phone"
+        value={formData.phone}
+        onChange={handleChange}
+        variant="outlined"
+        fullWidth
+      />
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+        <Button onClick={onCancel} variant="outlined">Cancel</Button>
+        <Button type="submit" variant="contained">Save</Button>
+      </Box>
+    </Box>
   );
 };
 

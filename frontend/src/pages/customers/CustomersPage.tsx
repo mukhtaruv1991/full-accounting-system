@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { api } from '../../api/api';
+import { localApi } from '../../api/localApi';
 import CustomerForm from '../../components/customers/CustomerForm';
+import {
+  Box, Typography, Button, Paper, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, IconButton, Alert
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 
 interface Customer {
   id: string;
@@ -17,10 +24,10 @@ const CustomersPage: React.FC = () => {
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const data = await api.get('/customers');
+      const data = await localApi.get('customers');
       setCustomers(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch customers');
+      setError('Failed to load customers.');
     }
   }, []);
 
@@ -31,97 +38,76 @@ const CustomersPage: React.FC = () => {
   const handleSave = async (customerData: Omit<Customer, 'id'>) => {
     try {
       if (editingCustomer) {
-        await api.put(`/customers/${editingCustomer.id}`, customerData);
+        await localApi.put('customers', editingCustomer.id, customerData);
       } else {
-        await api.post('/customers', customerData);
+        await localApi.post('customers', customerData);
       }
-      setEditingCustomer(null);
       setIsFormVisible(false);
       fetchCustomers();
     } catch (err: any) {
-      setError(err.message);
+      setError('Failed to save customer.');
     }
   };
 
-  const handleEdit = (customer: Customer) => {
-    setEditingCustomer(customer);
-    setIsFormVisible(true);
-  };
-
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this customer?')) {
+    if (window.confirm('Are you sure?')) {
       try {
-        await api.delete(`/customers/${id}`);
+        await localApi.delete('customers', id);
         fetchCustomers();
       } catch (err: any) {
-        setError(err.message);
+        setError('Failed to delete customer.');
       }
     }
   };
 
-  const handleAddNew = () => {
-    setEditingCustomer(null);
-    setIsFormVisible(true);
-  };
-
-  const handleCancel = () => {
-    setEditingCustomer(null);
-    setIsFormVisible(false);
-  };
-
   return (
-    <div className="container">
-      <h2>Customers Management</h2>
-      {error && <p className="error-message">{error}</p>}
-
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Customers Management
+      </Typography>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {!isFormVisible && (
-        <button onClick={handleAddNew} style={{ marginBottom: '1rem' }}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => { setEditingCustomer(null); setIsFormVisible(true); }}
+          sx={{ mb: 2 }}
+        >
           Add New Customer
-        </button>
+        </Button>
       )}
-
       {isFormVisible && (
-        <div>
-          <h3>{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</h3>
-          <CustomerForm
-            customer={editingCustomer}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        </div>
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</Typography>
+          <CustomerForm customer={editingCustomer} onSave={handleSave} onCancel={() => setIsFormVisible(false)} />
+        </Paper>
       )}
-
-      <hr style={{ margin: '2rem 0' }} />
-
-      <h3>All Customers</h3>
-      {customers.length === 0 ? (
-        <p>No customers found. Click "Add New Customer" to start.</p>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Name</th>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Email</th>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Phone</th>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Phone</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {customers.map((customer) => (
               <tr key={customer.id}>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>{customer.name}</td>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>{customer.email || 'N/A'}</td>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>{customer.phone || 'N/A'}</td>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                  <button onClick={() => handleEdit(customer)}>Edit</button>
-                  <button onClick={() => handleDelete(customer.id)} style={{ marginLeft: '5px' }}>Delete</button>
-                </td>
+                <TableCell>{customer.name}</TableCell>
+                <TableCell>{customer.email || 'N/A'}</TableCell>
+                <TableCell>{customer.phone || 'N/A'}</TableCell>
+                <TableCell align="right">
+                  <IconButton onClick={() => { setEditingCustomer(customer); setIsFormVisible(true); }} color="primary"><EditIcon /></IconButton>
+                  <IconButton onClick={() => handleDelete(customer.id)} color="error"><DeleteIcon /></IconButton>
+                </TableCell>
               </tr>
             ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 };
 

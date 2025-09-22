@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { api } from '../../api/api';
+import { localApi } from '../../api/localApi';
 import SupplierForm from '../../components/suppliers/SupplierForm';
+import {
+  Box, Typography, Button, Paper, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, IconButton, Alert
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 
 interface Supplier {
   id: string;
@@ -17,10 +24,10 @@ const SuppliersPage: React.FC = () => {
 
   const fetchSuppliers = useCallback(async () => {
     try {
-      const data = await api.get('/suppliers');
+      const data = await localApi.get('suppliers');
       setSuppliers(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch suppliers');
+      setError('Failed to load suppliers.');
     }
   }, []);
 
@@ -31,97 +38,76 @@ const SuppliersPage: React.FC = () => {
   const handleSave = async (supplierData: Omit<Supplier, 'id'>) => {
     try {
       if (editingSupplier) {
-        await api.put(`/suppliers/${editingSupplier.id}`, supplierData);
+        await localApi.put('suppliers', editingSupplier.id, supplierData);
       } else {
-        await api.post('/suppliers', supplierData);
+        await localApi.post('suppliers', supplierData);
       }
-      setEditingSupplier(null);
       setIsFormVisible(false);
       fetchSuppliers();
     } catch (err: any) {
-      setError(err.message);
+      setError('Failed to save supplier.');
     }
   };
 
-  const handleEdit = (supplier: Supplier) => {
-    setEditingSupplier(supplier);
-    setIsFormVisible(true);
-  };
-
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this supplier?')) {
+    if (window.confirm('Are you sure?')) {
       try {
-        await api.delete(`/suppliers/${id}`);
+        await localApi.delete('suppliers', id);
         fetchSuppliers();
       } catch (err: any) {
-        setError(err.message);
+        setError('Failed to delete supplier.');
       }
     }
   };
 
-  const handleAddNew = () => {
-    setEditingSupplier(null);
-    setIsFormVisible(true);
-  };
-
-  const handleCancel = () => {
-    setEditingSupplier(null);
-    setIsFormVisible(false);
-  };
-
   return (
-    <div className="container">
-      <h2>Suppliers Management</h2>
-      {error && <p className="error-message">{error}</p>}
-
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Suppliers Management
+      </Typography>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {!isFormVisible && (
-        <button onClick={handleAddNew} style={{ marginBottom: '1rem' }}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => { setEditingSupplier(null); setIsFormVisible(true); }}
+          sx={{ mb: 2 }}
+        >
           Add New Supplier
-        </button>
+        </Button>
       )}
-
       {isFormVisible && (
-        <div>
-          <h3>{editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}</h3>
-          <SupplierForm
-            supplier={editingSupplier}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        </div>
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>{editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}</Typography>
+          <SupplierForm supplier={editingSupplier} onSave={handleSave} onCancel={() => setIsFormVisible(false)} />
+        </Paper>
       )}
-
-      <hr style={{ margin: '2rem 0' }} />
-
-      <h3>All Suppliers</h3>
-      {suppliers.length === 0 ? (
-        <p>No suppliers found. Click "Add New Supplier" to start.</p>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Name</th>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Email</th>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Phone</th>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Phone</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {suppliers.map((supplier) => (
               <tr key={supplier.id}>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>{supplier.name}</td>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>{supplier.email || 'N/A'}</td>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>{supplier.phone || 'N/A'}</td>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                  <button onClick={() => handleEdit(supplier)}>Edit</button>
-                  <button onClick={() => handleDelete(supplier.id)} style={{ marginLeft: '5px' }}>Delete</button>
-                </td>
+                <TableCell>{supplier.name}</TableCell>
+                <TableCell>{supplier.email || 'N/A'}</TableCell>
+                <TableCell>{supplier.phone || 'N/A'}</TableCell>
+                <TableCell align="right">
+                  <IconButton onClick={() => { setEditingSupplier(supplier); setIsFormVisible(true); }} color="primary"><EditIcon /></IconButton>
+                  <IconButton onClick={() => handleDelete(supplier.id)} color="error"><DeleteIcon /></IconButton>
+                </TableCell>
               </tr>
             ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 };
 
