@@ -11,20 +11,30 @@ interface AccountingDB extends DBSchema {
   journal_entries: { key: string; value: any; };
 }
 
-// A type for the names of our object stores
-type StoreName = keyof AccountingDB;
-
 // Open the database
 export const dbPromise = openDB<AccountingDB>('full-accounting-db', 1, {
   upgrade(db: IDBPDatabase<AccountingDB>) {
-    const stores: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries'];
-    
-    stores.forEach(storeName => {
-      // The definitive fix: Explicitly check if the store name is a valid key.
-      // This satisfies the strict type checking during the build process.
-      if (!db.objectStoreNames.contains(storeName)) {
-        db.createObjectStore(storeName, { keyPath: 'id' });
-      }
-    });
+    // Explicitly create each object store. This is the most robust way.
+    if (!db.objectStoreNames.contains('accounts')) {
+      db.createObjectStore('accounts', { keyPath: 'id' });
+    }
+    if (!db.objectStoreNames.contains('customers')) {
+      db.createObjectStore('customers', { keyPath: 'id' });
+    }
+    if (!db.objectStoreNames.contains('suppliers')) {
+      db.createObjectStore('suppliers', { keyPath: 'id' });
+    }
+    if (!db.objectStoreNames.contains('items')) {
+      db.createObjectStore('items', { keyPath: 'id' });
+    }
+    if (!db.objectStoreNames.contains('sales')) {
+      db.createObjectStore('sales', { keyPath: 'id' });
+    }
+    if (!db.objectStoreNames.contains('purchases')) {
+      db.createObjectStore('purchases', { keyPath: 'id' });
+    }
+    if (!db.objectStoreNames.contains('journal_entries')) {
+      db.createObjectStore('journal_entries', { keyPath: 'id' });
+    }
   },
 });
