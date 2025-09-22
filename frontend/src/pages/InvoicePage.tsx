@@ -4,15 +4,15 @@ import { localApi } from '../api/localApi';
 import { v4 as uuidv4 } from 'uuid';
 import {
   Box, Typography, Paper, Grid, TextField, Button, Select, MenuItem, FormControl, InputLabel,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Autocomplete, CircularProgress, Alert
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Autocomplete, CircularProgress, Alert, Snackbar
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { format } from 'date-fns';
 
 // --- Interfaces ---
-interface Contact { id: string; name: string; }
-interface Item { id: string; name: string; price: number; cost: number; }
+interface Contact { id: string; name: string; accountId: string; }
+interface Item { id: string; name: string; price: number; cost: number; quantity: number; }
 interface InvoiceItem {
   id: string;
   itemId: string;
@@ -26,7 +26,6 @@ interface Invoice {
   date: string;
   contactId: string;
   items: InvoiceItem[];
-  subtotal: number;
   total: number;
 }
 
@@ -36,14 +35,16 @@ const InvoicePage: React.FC = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
+  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([{ id: uuidv4(), itemId: '', quantity: 1, price: 0, total: 0 }]);
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const fetchInitialData = useCallback(async () => {
     try {
       setLoading(true);
+      setError('');
       const [customers, suppliers, itemsData] = await Promise.all([
         localApi.get('customers'),
         localApi.get('suppliers'),
@@ -80,7 +81,7 @@ const InvoicePage: React.FC = () => {
       (currentItem as any)[field] = value;
     }
     
-    currentItem.total = currentItem.quantity * currentItem.price;
+    currentItem.total = (currentItem.quantity || 0) * (currentItem.price || 0);
     newItems[index] = currentItem;
     setInvoiceItems(newItems);
   };
@@ -89,32 +90,79 @@ const InvoicePage: React.FC = () => {
     setInvoiceItems(invoiceItems.filter(item => item.id !== id));
   };
 
-  const subtotal = invoiceItems.reduce((sum, item) => sum + item.total, 0);
+  const total = invoiceItems.reduce((sum, item) => sum + item.total, 0);
+
+  const resetForm = () => {
+    setSelectedContact(null);
+    setInvoiceItems([{ id: uuidv4(), itemId: '', quantity: 1, price: 0, total: 0 }]);
+    setDate(format(new Date(), 'yyyy-MM-dd'));
+  };
 
   const handleSaveInvoice = async () => {
-    // Logic to save the invoice will be added in the next step
-    console.log({
+    if (!selectedContact || invoiceItems.some(i => !i.itemId || i.quantity <= 0)) {
+      setError('Please select a contact and ensure all items are valid.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+
+    const invoiceId = uuidv4();
+    const newInvoice: Invoice = {
+      id: invoiceId,
       type: invoiceType,
-      contactId: selectedContact?.id,
-      date,
+      contactId: selectedContact.id,
+      date: new Date(date).toISOString(),
       items: invoiceItems,
-      total: subtotal,
-    });
-    alert('Invoice saved to console! (Backend logic next)');
+      total: total,
+    };
+
+    // --- Core Accounting & Inventory Logic ---
+    try {
+      // 1. Save the invoice itself
+      await localApi.post(invoiceType === 'sale' ? 'sales' : 'purchases', newInvoice);
+
+      // 2. Create the corresponding journal entry
+      const journalEntry = {
+        id: uuidv4(),
+        date: newInvoice.date,
+        description: `${t(invoiceType)} Invoice #${invoiceId.substring(0, 8)}`,
+        debitAccountId: invoiceType === 'sale' ? selectedContact.accountId : 'PURCHASES_ACCOUNT_ID', // Placeholder
+        creditAccountId: invoiceType === 'sale' ? 'SALES_ACCOUNT_ID' : selectedContact.accountId, // Placeholder
+        amount: total,
+        companyId: 'local', // Assuming a local-only context for now
+      };
+      await localApi.post('journal_entries', journalEntry);
+
+      // 3. Update item quantities (inventory)
+      for (const item of invoiceItems) {
+        const existingItem = await localApi.get('items', item.itemId) as Item;
+        if (existingItem) {
+          const newQuantity = invoiceType === 'sale'
+            ? existingItem.quantity - item.quantity
+            : existingItem.quantity + item.quantity;
+          await localApi.put('items', item.itemId, { ...existingItem, quantity: newQuantity });
+        }
+      }
+
+      setSuccess('Invoice saved successfully!');
+      resetForm();
+      // Optionally, refetch data for any displayed lists
+    } catch (err: any) {
+      setError(err.message || 'Failed to save invoice.');
+    }
   };
 
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
   }
 
-  if (error) {
-    return <Alert severity="error">{error}</Alert>;
-  }
-
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>{t('new_invoice')}</Typography>
       
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Snackbar open={!!success} autoHideDuration={6000} onClose={() => setSuccess('')} message={success} />
+
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={4}>
           <FormControl fullWidth>
@@ -153,7 +201,7 @@ const InvoicePage: React.FC = () => {
           <TableBody>
             {invoiceItems.map((invoiceItem, index) => (
               <TableRow key={invoiceItem.id}>
-                <TableCell>
+                <TableCell sx={{ minWidth: 200 }}>
                   <Autocomplete
                     options={items}
                     getOptionLabel={(option) => option.name}
@@ -184,8 +232,7 @@ const InvoicePage: React.FC = () => {
 
       <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
         <Box sx={{ width: 250 }}>
-          <Typography variant="h6">Subtotal: ${subtotal.toFixed(2)}</Typography>
-          <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Total: ${subtotal.toFixed(2)}</Typography>
+          <Typography variant="h6">Total: ${total.toFixed(2)}</Typography>
         </Box>
       </Box>
 
