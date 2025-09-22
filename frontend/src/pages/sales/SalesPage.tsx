@@ -8,7 +8,7 @@ const SalesPage: React.FC = () => {
       <Typography variant="h4" component="h1" gutterBottom>
         Sales
       </Typography>
-      <InvoiceForm />
+      <InvoiceForm invoiceType="sale" />
       {/* The list of saved sales invoices will be added here later */}
     </Box>
   );
