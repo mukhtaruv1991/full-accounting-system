@@ -16,16 +16,16 @@ import SuppliersPage from './pages/SuppliersPage';
 import ItemsPage from './pages/ItemsPage';
 import InvoicePage from './pages/InvoicePage';
 import PriceAnalysisPage from './pages/PriceAnalysisPage';
+import MembershipRequestsPage from './pages/MembershipRequestsPage'; // Import the new page
 
 const AppRoutes: React.FC = () => {
-  const { user, selectedCompany, loading, userMemberships } = useAuth();
+  const { user, selectedCompany, loading } = useAuth();
 
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><CircularProgress /></Box>;
   }
 
   if (user && !selectedCompany) {
-    // If user is logged in but hasn't selected a company, show selection page
     return <CompanySelectionPage />;
   }
 
@@ -34,7 +34,6 @@ const AppRoutes: React.FC = () => {
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />
       <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/" />} />
       
-      {/* Protected Routes */}
       <Route path="/" element={user && selectedCompany ? <AppLayout /> : <Navigate to="/login" />}>
         <Route index element={<DashboardPage />} />
         <Route path="dashboard" element={<DashboardPage />} />
@@ -44,6 +43,7 @@ const AppRoutes: React.FC = () => {
         <Route path="items" element={<ItemsPage />} />
         <Route path="invoices" element={<InvoicePage />} />
         <Route path="price-analysis" element={<PriceAnalysisPage />} />
+        <Route path="membership-requests" element={<MembershipRequestsPage />} /> {/* Add the new route */}
         <Route path="*" element={<Typography>Page Not Found</Typography>} />
       </Route>
     </Routes>
