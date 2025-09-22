@@ -1,6 +1,5 @@
-// Use the internal service name provided by Render for direct, fast, and reliable communication.
-// The backend service is named 'full-accounting-backend' and runs on port 5000.
-const API_BASE_URL = 'http://full-accounting-backend:5000';
+// Reverting to the public URL, as the internal one is not working as expected on the free tier.
+const API_BASE_URL = 'https://full-accounting-backend.onrender.com';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -11,14 +10,7 @@ const getAuthHeaders = () => {
 };
 
 const apiRequest = async (method: string, path: string, data: any = null) => {
-  const headers = new Headers({
-    'Content-Type': 'application/json',
-  });
-
-  const token = localStorage.getItem('token');
-  if (token) {
-    headers.append('Authorization', `Bearer ${token}`);
-  }
+  const headers = new Headers(getAuthHeaders());
 
   const config: RequestInit = {
     method,
@@ -45,8 +37,9 @@ const apiRequest = async (method: string, path: string, data: any = null) => {
   } catch (error: any) {
     console.error('API Request Failed:', error);
     
+    // This is the message you are seeing. It indicates a network-level failure.
     if (error.message.includes('Failed to fetch')) {
-       throw new Error('Internal connection failed. The backend service might be starting up. Please wait a moment and try again.');
+       throw new Error('Failed to connect to the server. Please check your connection and try again.');
     }
     
     throw error;
