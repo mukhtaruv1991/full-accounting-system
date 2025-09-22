@@ -1,4 +1,14 @@
-const API_BASE_URL = 'https://full-accounting-backend.onrender.com';
+// Use the internal service name provided by Render for direct, fast, and reliable communication.
+// The backend service is named 'full-accounting-backend' and runs on port 5000.
+const API_BASE_URL = 'http://full-accounting-backend:5000';
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
 
 const apiRequest = async (method: string, path: string, data: any = null) => {
   const headers = new Headers({
@@ -19,39 +29,26 @@ const apiRequest = async (method: string, path: string, data: any = null) => {
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, config);
 
-    // Check if the response is successful
     if (!response.ok) {
       let errorData;
       try {
-        // Try to parse error response from the server
         errorData = await response.json();
       } catch (e) {
-        // If parsing fails, use the status text
         throw new Error(response.statusText || `HTTP error! Status: ${response.status}`);
       }
-      // Throw an error with the message from the server
-      throw new Error(errorData.message || 'An unknown error occurred.');
-    }
-
-    // Handle cases where the response might be empty (e.g., for DELETE requests)
-    const responseText = await response.text();
-    if (!responseText) {
-      return {}; // Return an empty object for empty responses
+      throw new Error(errorData.message || 'An unknown server error occurred.');
     }
     
-    return JSON.parse(responseText);
+    const responseText = await response.text();
+    return responseText ? JSON.parse(responseText) : {};
 
   } catch (error: any) {
-    // Log the detailed error for future debugging
     console.error('API Request Failed:', error);
     
-    // Re-throw a user-friendly error message
-    // This is the message you are seeing
     if (error.message.includes('Failed to fetch')) {
-       throw new Error('Failed to connect to the server. Please check your connection and try again.');
+       throw new Error('Internal connection failed. The backend service might be starting up. Please wait a moment and try again.');
     }
     
-    // Throw other errors (like from response.ok check) as they are
     throw error;
   }
 };
