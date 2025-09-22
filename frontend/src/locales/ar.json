@@ -21,6 +21,27 @@
     "add_item": "إضافة صنف",
     "subtotal": "المجموع الفرعي",
     "save_invoice": "حفظ الفاتورة",
-    "cancel": "إلغاء"
+    "cancel": "إلغاء",
+    "accounts_management": "إدارة الحسابات",
+    "add_new_account": "إضافة حساب جديد",
+    "edit_account": "تعديل الحساب",
+    "search_accounts": "ابحث بالاسم، الكود، أو النوع...",
+    "no_accounts_found": "لم يتم العثور على حسابات تطابق بحثك.",
+    "name": "الاسم",
+    "code": "الكود",
+    "type": "النوع",
+    "customers_management": "إدارة العملاء",
+    "add_new_customer": "إضافة عميل جديد",
+    "edit_customer": "تعديل العميل",
+    "no_customers_found": "لا يوجد عملاء. انقر على 'إضافة عميل جديد' للبدء.",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "suppliers_management": "إدارة الموردين",
+    "add_new_supplier": "إضافة مورد جديد",
+    "edit_supplier": "تعديل المورد",
+    "no_suppliers_found": "لا يوجد موردون. انقر على 'إضافة مورد جديد' للبدء.",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "confirm_delete": "هل أنت متأكد أنك تريد حذف هذا؟"
   }
 }
