@@ -10,7 +10,8 @@ import SalesPage from './pages/sales/SalesPage';
 import PurchasesPage from './pages/purchases/PurchasesPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
-import SettingsPage from './pages/SettingsPage'; // We will create this page
+// We will create SettingsPage later
+// import SettingsPage from './pages/SettingsPage'; 
 
 function App() {
   return (
@@ -18,7 +19,7 @@ function App() {
       <nav style={{ display: 'flex', alignItems: 'center', padding: '10px 20px', backgroundColor: '#1e40af', color: 'white' }}>
         <Link to="/" style={{ marginRight: '15px', fontWeight: 'bold', color: 'white' }}>Accounting System</Link>
         <div style={{ marginLeft: 'auto' }}>
-          <Link to="/settings" style={{ color: 'white' }}>Settings</Link>
+          {/* The Login/Register/Sync button will be here later */}
         </div>
       </nav>
       <div className="container" style={{ display: 'flex', marginTop: '20px' }}>
@@ -45,7 +46,7 @@ function App() {
             <Route path="/purchases" element={<PurchasesPage />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            {/* <Route path="/settings" element={<SettingsPage />} /> */}
           </Routes>
         </main>
       </div>
