@@ -1,21 +1,21 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider } from './theme/ThemeProvider';
-import AppLayout from './components/layout/AppLayout';
+import { AppThemeProvider } from './theme/ThemeProvider'; // Corrected import name
+import AppLayout from './components/AppLayout'; // Corrected path
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import SelectCompanyPage from './pages/auth/SelectCompanyPage';
 import DashboardPage from './pages/DashboardPage';
-import AccountsPage from './pages/AccountsPage';
-import CustomersPage from './pages/CustomersPage';
-import SuppliersPage from './pages/SuppliersPage';
-import ItemsPage from './pages/ItemsPage';
-import SalesPage from './pages/SalesPage';
-import PurchasesPage from './pages/PurchasesPage';
-import JournalEntriesPage from './pages/JournalEntriesPage';
+import AccountsPage from './pages/accounts/AccountsPage'; // Corrected path
+import CustomersPage from './pages/customers/CustomersPage'; // Corrected path
+import SuppliersPage from './pages/suppliers/SuppliersPage'; // Corrected path
+import ItemsPage from './pages/items/ItemsPage'; // Corrected path
+import SalesPage from './pages/sales/SalesPage'; // Corrected path
+import PurchasesPage from './pages/purchases/PurchasesPage'; // Corrected path
+import JournalEntriesPage from './pages/journal-entries/JournalEntriesPage'; // Corrected path
 import InvoicePage from './pages/InvoicePage';
-import RequestsPage from './pages/admin/RequestsPage'; // Import the new page
+import RequestsPage from './pages/admin/RequestsPage';
 import SettingsPage from './pages/SettingsPage';
 import ChatListPage from './pages/chat/ChatListPage';
 import ChatPage from './pages/chat/ChatPage';
@@ -40,7 +40,7 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 function App() {
   return (
-    <ThemeProvider>
+    <AppThemeProvider>
       <Router>
         <AuthProvider>
           <Routes>
@@ -59,17 +59,17 @@ function App() {
               <Route path="purchases" element={<PurchasesPage />} />
               <Route path="invoices/new" element={<InvoicePage />} />
               <Route path="journal-entries" element={<JournalEntriesPage />} />
-              <Route path="admin/requests" element={<RequestsPage />} /> {/* Add the new route */}
+              <Route path="admin/requests" element={<RequestsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="chats" element={<ChatListPage />} />
-            <Route path="chat/:conversationId" element={<ChatPage />} />
+              <Route path="chat/:conversationId" element={<ChatPage />} />
             </Route>
             
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </AuthProvider>
       </Router>
-    </ThemeProvider>
+    </AppThemeProvider>
   );
 }
 

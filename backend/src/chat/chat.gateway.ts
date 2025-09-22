@@ -17,6 +17,7 @@ interface ChatPayload {
   type: 'text' | 'image' | 'audio';
 }
 
+@UseGuards(WsJwtGuard)
 @WebSocketGateway({
   cors: { origin: '*' },
   namespace: 'chat',
@@ -52,7 +53,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: ChatPayload,
   ): Promise<void> {
     // TODO: استخلاص هوية المستخدم الحقيقية من الـ token
-    const senderId = 'temp-user-id'; 
+    const senderId = client.data.user.id; 
 
     const savedMessage = await this.chatService.createMessage(
       senderId,
