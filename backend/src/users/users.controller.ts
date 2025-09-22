@@ -1,10 +1,18 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+class SyncContactsDto {
+  hashedPhones: string[];
+}
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // The registration logic has been moved to AuthController.
-  // This controller can be used for other user-related actions in the future (e.g., get profile).
+  @UseGuards(JwtAuthGuard)
+  @Post('sync-contacts')
+  syncContacts(@Body() syncContactsDto: SyncContactsDto) {
+    return this.usersService.findByHashedPhones(syncContactsDto.hashedPhones);
+  }
 }

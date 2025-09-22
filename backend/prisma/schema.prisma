@@ -15,6 +15,7 @@ model Company {
   name      String
   address   String?
   phone     String?
+  phoneHash String? @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   users     User[]
@@ -34,6 +35,7 @@ model User {
   email     String   @unique
   name      String?
   phone     String?  @unique
+  phoneHash String? @unique
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -106,6 +108,7 @@ model Customer {
   name      String
   email     String?
   phone     String?
+  phoneHash String? @unique
   address   String?
   balance   Float    @default(0)
   createdAt DateTime @default(now())
@@ -120,6 +123,7 @@ model Supplier {
   name      String
   email     String?
   phone     String?
+  phoneHash String? @unique
   address   String?
   balance   Float    @default(0)
   createdAt DateTime @default(now())
