@@ -2,39 +2,27 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as dotenv from 'dotenv';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import * as express from 'express';
 
 dotenv.config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // --- Comprehensive CORS Configuration ---
-  // This is a more permissive setting to ensure requests are not blocked
-  // by any CORS policy, especially the preflight OPTIONS requests.
   app.enableCors({
-    origin: '*', // Allow all origins
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization',
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Explicitly handle OPTIONS requests for all routes
-  app.use((req, res, next) => {
-    if (req.method === 'OPTIONS') {
-      res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization');
-      res.sendStatus(204); // No Content - The preflight request is successful
-    } else {
-      next();
-    }
-  });
-  // --- End of CORS Update ---
+  // Serve static files from the 'uploads' directory
+  app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
 
   app.useGlobalPipes(new ValidationPipe());
   
-  const port = process.env.PORT || 5000;
-  await app.listen(port);
-  console.log(`🚀 Backend application is running on port: ${port}`);
+  await app.listen(process.env.PORT || 5000);
+  console.log(`🚀 Backend application is running on: ${await app.getUrl()}`);
 }
 bootstrap();
