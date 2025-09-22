@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { api } from '../api/api';
 import { localApi, AccountingDB } from '../api/localApi';
+import { socket } from '../api/socket'; // Import the socket instance
 import { jwtDecode, JwtPayload } from 'jwt-decode';
 
 interface Membership {
@@ -37,16 +38,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log(`Starting sync for company: ${companyId}`);
     try {
       const stores: (keyof AccountingDB)[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries'];
-      
-      // Set the companyId for localApi to use the correct database
       localApi.setCompanyId(companyId);
-
+      const db = await localApi.getDb(companyId);
+      
       for (const storeName of stores) {
         console.log(`Syncing ${storeName}...`);
         const serverData = await api.get(`/${storeName}`);
-        const db = await localApi.getDb(companyId);
         const tx = db.transaction(storeName, 'readwrite');
-        await tx.store.clear(); // Clear old data before syncing
+        await tx.store.clear();
         for (const item of serverData) {
           await tx.store.put(item);
         }
@@ -55,7 +54,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error) {
       console.error('Sync failed:', error);
-      // Handle sync error appropriately, maybe show a notification
     } finally {
       setSyncLoading(false);
       console.log('Sync process finished.');
@@ -75,6 +73,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (membership) {
             setSelectedCompany(membership.company);
             localApi.setCompanyId(membership.company.id);
+            socket.auth = { token };
+            socket.connect(); // Connect socket after user is authenticated
           }
         }
       } catch (error) {
@@ -87,6 +87,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     loadSession();
+    return () => {
+      socket.disconnect(); // Disconnect on cleanup
+    };
   }, [loadSession]);
 
   const login = async (email: string, password: string) => {
@@ -95,14 +98,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('token', access_token);
     const decodedUser = jwtDecode<User>(access_token);
     setUser(decodedUser);
+    // Connect socket after successful login
+    socket.auth = { token: access_token };
+    socket.connect();
   };
 
   const logout = () => {
+    socket.disconnect();
     localStorage.removeItem('token');
     localStorage.removeItem('selectedCompanyId');
     setUser(null);
     setSelectedCompany(null);
-    localApi.setCompanyId(null); // Reset local DB context
+    localApi.setCompanyId(null);
   };
 
   const selectCompany = useCallback(async (companyId: string) => {

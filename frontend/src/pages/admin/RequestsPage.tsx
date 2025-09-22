@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/api';
+import { socket } from '../../api/socket';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Button, CircularProgress, Alert, Chip
@@ -33,13 +34,23 @@ const RequestsPage: React.FC = () => {
 
   useEffect(() => {
     fetchRequests();
+
+    const handleNewRequest = (newRequest: JoinRequest) => {
+      setRequests(prev => [newRequest, ...prev]);
+    };
+
+    socket.on('newJoinRequest', handleNewRequest);
+
+    return () => {
+      socket.off('newJoinRequest', handleNewRequest);
+    };
   }, [fetchRequests]);
 
   const handleRequest = async (requestId: string, status: 'approved' | 'rejected') => {
     try {
       await api.put(`/company/join-requests/${requestId}`, { status });
-      // Refresh the list after action
-      fetchRequests();
+      // The list will update via socket event, but we can also optimistically update
+      setRequests(prev => prev.filter(r => r.id !== requestId));
     } catch (err: any) {
       setError(err.message || `Failed to ${status} request.`);
     }
