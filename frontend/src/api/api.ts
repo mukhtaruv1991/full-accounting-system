@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000'; // <-- Reverted to localhost
+const API_BASE_URL = 'https://full-accounting-backend.onrender.com'; // <-- Updated to the live backend URL
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -24,11 +24,13 @@ const apiRequest = async (method: string, path: string, data: any = null) => {
       throw new Error(errorData.message || 'Something went wrong');
     }
     
+    // Handle cases where the response might be empty
     const text = await response.text();
     return text ? JSON.parse(text) : {};
   } catch (error) {
     console.error('API Request Error:', error);
-    throw new Error('Failed to connect to the server. Please ensure the backend is running and `adb reverse tcp:5000 tcp:5000` is active.');
+    // Provide a more user-friendly error message
+    throw new Error('Failed to connect to the server. Please check your connection and try again.');
   }
 };
 
