@@ -50,6 +50,12 @@
   "total": "الإجمالي",
   "add_item": "إضافة صنف",
   "save_invoice": "حفظ الفاتورة",
-  "sales_account_id": "SALES_ACCOUNT_ID",
-  "purchases_account_id": "PURCHASES_ACCOUNT_ID"
+  "login": "تسجيل الدخول",
+  "register": "تسجيل حساب جديد",
+  "password": "كلمة المرور",
+  "your_name": "اسمك",
+  "company_name": "اسم المؤسسة",
+  "no_account_register": "ليس لديك حساب؟ سجل الآن",
+  "already_have_account": "لديك حساب بالفعل؟ سجل الدخول",
+  "select_company": "اختر المؤسسة"
 }

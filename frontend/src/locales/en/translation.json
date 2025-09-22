@@ -50,6 +50,12 @@
   "total": "Total",
   "add_item": "Add Item",
   "save_invoice": "Save Invoice",
-  "sales_account_id": "SALES_ACCOUNT_ID",
-  "purchases_account_id": "PURCHASES_ACCOUNT_ID"
+  "login": "Login",
+  "register": "Register",
+  "password": "Password",
+  "your_name": "Your Name",
+  "company_name": "Company Name",
+  "no_account_register": "Don't have an account? Sign Up",
+  "already_have_account": "Already have an account? Sign in",
+  "select_company": "Select Company"
 }
