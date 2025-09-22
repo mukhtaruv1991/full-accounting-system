@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box, Typography, TextField, Button, Grid, Autocomplete, Paper, IconButton,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
@@ -50,11 +50,12 @@ const InvoiceForm: React.FC = () => {
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>New Invoice</Typography>
+      {/* The fix is here: The 'item' prop is removed from the Grid children. */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6}>
+        <Grid xs={12} sm={6}>
           <TextField label="Customer / Supplier" fullWidth variant="outlined" />
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid xs={12} sm={6}>
           <TextField type="date" label="Date" fullWidth variant="outlined" InputLabelProps={{ shrink: true }} defaultValue={new Date().toISOString().split('T')[0]} />
         </Grid>
       </Grid>
