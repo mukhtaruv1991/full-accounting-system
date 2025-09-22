@@ -10,17 +10,14 @@ import SalesPage from './pages/sales/SalesPage';
 import PurchasesPage from './pages/purchases/PurchasesPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
-// We will create SettingsPage later
-// import SettingsPage from './pages/SettingsPage'; 
+// import SettingsPage from './pages/SettingsPage'; // Will be added later
 
 function App() {
   return (
     <Router>
       <nav style={{ display: 'flex', alignItems: 'center', padding: '10px 20px', backgroundColor: '#1e40af', color: 'white' }}>
         <Link to="/" style={{ marginRight: '15px', fontWeight: 'bold', color: 'white' }}>Accounting System</Link>
-        <div style={{ marginLeft: 'auto' }}>
-          {/* The Login/Register/Sync button will be here later */}
-        </div>
+        {/* Future Auth/Settings button will go here */}
       </nav>
       <div className="container" style={{ display: 'flex', marginTop: '20px' }}>
         <aside style={{ width: '20%', paddingRight: '20px', borderRight: '1px solid #eee' }}>
