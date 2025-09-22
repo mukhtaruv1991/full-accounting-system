@@ -17,6 +17,8 @@ import JournalEntriesPage from './pages/JournalEntriesPage';
 import InvoicePage from './pages/InvoicePage';
 import RequestsPage from './pages/admin/RequestsPage'; // Import the new page
 import SettingsPage from './pages/SettingsPage';
+import ChatListPage from './pages/chat/ChatListPage';
+import ChatPage from './pages/chat/ChatPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, selectedCompany, loading } = useAuth();
@@ -59,6 +61,8 @@ function App() {
               <Route path="journal-entries" element={<JournalEntriesPage />} />
               <Route path="admin/requests" element={<RequestsPage />} /> {/* Add the new route */}
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="chats" element={<ChatListPage />} />
+            <Route path="chat/:conversationId" element={<ChatPage />} />
             </Route>
             
             <Route path="*" element={<Navigate to="/" />} />
