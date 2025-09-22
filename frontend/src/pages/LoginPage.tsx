@@ -1,29 +1,24 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
-import { api } from '../api/api'; // Import api to handle the login response
+import { Link, Navigate } from 'react-router-dom';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const { login, user } = useAuth(); // Get user state to check if already logged in
+
+  // If user is already logged in, redirect them away from the login page
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
-      // The login function in the context will handle setting the token and user state
-      const response = await login(email, password);
-      
-      // After login, we check the memberships from the response to decide where to navigate
-      if (response && response.memberships && response.memberships.length > 1) {
-        navigate('/select-company');
-      } else {
-        navigate('/dashboard');
-      }
-
+      // Just call login. The navigation will be handled by App.tsx's useEffect.
+      await login(email, password);
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
     }
