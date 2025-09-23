@@ -32,7 +32,6 @@ class LocalApi {
           const objectStoreNames: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
           
           objectStoreNames.forEach(storeName => {
-            // --- FINAL FIX APPLIED HERE ---
             if (!db.objectStoreNames.contains(storeName as any)) {
               db.createObjectStore(storeName as any, { keyPath: 'id' });
             }
@@ -62,7 +61,6 @@ class LocalApi {
     return this.dbPromise;
   }
 
-  // --- FIX APPLIED TO ALL METHODS ---
   async get(storeName: StoreName) { const db = await this.getDb(); return db.getAll(storeName as any); }
   async getById(storeName: StoreName, key: string) { const db = await this.getDb(); return db.get(storeName as any, key); }
   async post(storeName: StoreName, value: any) { const db = await this.getDb(); return db.add(storeName as any, { ...value, id: value.id || uuidv4() }); }

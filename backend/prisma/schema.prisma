@@ -26,6 +26,7 @@ model Company {
   sales           Sale[]
   purchases       Purchase[]
   journalEntries  JournalEntry[]
+  joinRequests    JoinRequest[]
 }
 
 model User {
@@ -38,11 +39,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships   Membership[]
-  sentMessages  Message[]
-  readStatuses  MessageReadStatus[]
-  notifications Notification[]
-  conversations Conversation[] @relation("UserConversations")
+  memberships        Membership[]
+  joinRequests       JoinRequest[]
+  sentMessages       Message[]
+  readStatuses       MessageReadStatus[]
+  notifications      Notification[]
+  conversations      Conversation[] @relation("UserConversations")
 }
 
 model Membership {
@@ -143,7 +145,7 @@ model Sale {
   updatedAt   DateTime @updatedAt
 
   company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id])
 }
 
 model Purchase {
@@ -157,7 +159,7 @@ model Purchase {
   updatedAt   DateTime @updatedAt
 
   company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id])
 }
 
 model JournalEntry {
