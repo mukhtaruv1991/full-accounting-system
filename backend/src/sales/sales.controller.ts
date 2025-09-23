@@ -10,9 +10,14 @@ export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
   @Post()
-  create(@Body() createSaleDto: Prisma.SaleUncheckedCreateInput, @CurrentUser() user: any) {
-    const dataWithCompany = { ...createSaleDto, companyId: user.companyId };
-    return this.salesService.create(dataWithCompany);
+  create(@Body() createSaleDto: any, @CurrentUser() user: any) {
+    const { customerId, ...restOfDto } = createSaleDto;
+    const data: Prisma.SaleCreateInput = {
+      ...restOfDto,
+      company: { connect: { id: user.companyId } },
+      customer: { connect: { id: customerId } },
+    };
+    return this.salesService.create(data);
   }
 
   @Get()
