@@ -27,6 +27,7 @@ model Company {
   purchases       Purchase[]
   journalEntries  JournalEntry[]
   joinRequests    JoinRequest[]
+  auditLogs       AuditLog[] // Relation added for Phase 5
 }
 
 model User {
@@ -45,6 +46,9 @@ model User {
   readStatuses       MessageReadStatus[]
   notifications      Notification[]
   conversations      Conversation[] @relation("UserConversations")
+  auditLogs          AuditLog[]   // Relation added for Phase 5
+  roleId             String?      // Relation added for Phase 5
+  role               Role?        @relation(fields: [roleId], references: [id]) // Relation added for Phase 5
 }
 
 model Membership {
@@ -206,7 +210,7 @@ model Message {
   createdAt      DateTime            @default(now())
   senderId       String
   conversationId String
-  
+
   sender         User                @relation(fields: [senderId], references: [id], onDelete: Cascade)
   conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   readStatuses   MessageReadStatus[]
@@ -224,17 +228,17 @@ model MessageReadStatus {
   @@unique([messageId, userId])
 }
 
+// --- Added in Phase 5 for Auditing and RBAC ---
 
-// Added in Phase 5 for Auditing and RBAC
 model AuditLog {
   id        String   @id @default(cuid())
   action    String // e.g., "CREATE_INVOICE", "UPDATE_CUSTOMER"
   details   Json
   timestamp DateTime @default(now())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   companyId String
-  company   Company  @relation(fields: [companyId], references: [id])
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model Role {
@@ -249,4 +253,3 @@ model Permission {
   name  String @unique // e.g., "invoices:create", "invoices:delete", "reports:view"
   roles Role[]
 }
-
