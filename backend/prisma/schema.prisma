@@ -223,3 +223,30 @@ model MessageReadStatus {
 
   @@unique([messageId, userId])
 }
+
+
+// Added in Phase 5 for Auditing and RBAC
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String // e.g., "CREATE_INVOICE", "UPDATE_CUSTOMER"
+  details   Json
+  timestamp DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  permissions Permission[]
+  users       User[]
+}
+
+model Permission {
+  id    String @id @default(cuid())
+  name  String @unique // e.g., "invoices:create", "invoices:delete", "reports:view"
+  roles Role[]
+}
+
