@@ -31,16 +31,16 @@ export class AuthController {
         if (!companyName) {
           throw new BadRequestException('Company name is required for admin registration.');
         }
-        return this.usersService.createAdminAndCompany({ name, email, password, phone }, { name: companyName, address: companyAddress, phone: companyPhone });
+        return this.usersService.createAdminAndCompany({ name, email, password, phone, roleId: null }, { name: companyName, address: companyAddress, phone: companyPhone });
       
       case 'manager':
         if (!companyIdToJoin) {
           throw new BadRequestException('Company ID is required for manager registration.');
         }
-        return this.usersService.createManagerRequest({ name, email, password, phone }, companyIdToJoin);
+        return this.usersService.createManagerRequest({ name, email, password, phone, roleId: null }, companyIdToJoin);
 
       case 'normal':
-        return this.usersService.createNormalUser({ name, email, password, phone });
+        return this.usersService.createNormalUser({ name, email, password, phone, roleId: null });
 
       default:
         throw new BadRequestException('Invalid account type specified.');
