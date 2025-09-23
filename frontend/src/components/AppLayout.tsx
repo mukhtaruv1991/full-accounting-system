@@ -60,7 +60,7 @@ const AppLayout: React.FC = () => {
       <List>
         {navItems.map((item) => (
           <ListItem key={item.text} disablePadding>
-            <ListItemButton component={NavLink} to={item.path} sx={{ '<ListItemButton component={NavLink} to={item.path} style={({ isActive }) => ({ backgroundColor: isActive ? 'rgba(0, 0, 0, 0.08)' : 'transparent' })}>.active': { backgroundColor: 'action.selected' } }}>
+            <ListItemButton component={NavLink} to={item.path} sx={{ '<ListItemButton component={NavLink} to={item.path} sx={{ '<ListItemButton component={NavLink} to={item.path} style={({ isActive }) => ({ backgroundColor: isActive ? 'rgba(0, 0, 0, 0.08)' : 'transparent' })}>.active': { backgroundColor: 'action.selected' } }}>.active': { backgroundColor: 'action.selected' } }}>
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={t(item.text)} />
             </ListItemButton>
