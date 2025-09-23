@@ -1,6 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
-// Define the database schema
 export interface AccountingDB extends DBSchema {
   accounts: { key: string; value: any; };
   customers: { key: string; value: any; };
@@ -26,14 +25,11 @@ class LocalApi {
   private initDb() {
     if (typeof window !== 'undefined' && this.companyId) {
       const dbName = `${this.dbNamePrefix}${this.companyId}`;
-      this.dbPromise = openDB<AccountingDB>(dbName, 1, {
-        upgrade(db) {
-          const objectStoreNames: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
-          
-          objectStoreNames.forEach(storeName => {
-            // FINAL FIX: Using 'as any' to bypass the overly strict type checking here.
-            // The logic is sound, but the linter is struggling with the type inference.
-            if (!db.objectStoreNames.contains(storeName as any)) {
+      this.dbPromise = openDB<AccountingDB>(dbName, 2, { // Incremented version to ensure upgrade runs
+        upgrade(db, oldVersion, newVersion, transaction) {
+          const storesToCreate: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
+          storesToCreate.forEach(storeName => {
+            if (!db.objectStoreNames.contains(storeName)) {
               db.createObjectStore(storeName, { keyPath: 'id' });
             }
           });
@@ -62,7 +58,6 @@ class LocalApi {
     return this.dbPromise;
   }
 
-  // Generic CRUD methods
   async get(storeName: StoreName) { const db = await this.getDb(); return db.getAll(storeName); }
   async getById(storeName: StoreName, key: string) { const db = await this.getDb(); return db.get(storeName, key); }
   async post(storeName: StoreName, value: any) { const db = await this.getDb(); return db.add(storeName, { ...value, id: value.id || crypto.randomUUID() }); }

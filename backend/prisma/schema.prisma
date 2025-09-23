@@ -8,43 +8,45 @@ datasource db {
 }
 
 model Company {
-  id          String        @id @default(cuid())
-  name        String
-  address     String?
-  phone       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  memberships Membership[]
-  accounts    Account[]
-  items       Item[]
-  sales       Sale[]
-  purchases   Purchase[]
-  suppliers   Supplier[]
-  customers   Customer[]
+  id             String           @id @default(cuid())
+  name           String
+  address        String?
+  phone          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  memberships    Membership[]
+  accounts       Account[]
+  items          Item[]
+  sales          Sale[]
+  purchases      Purchase[]
+  suppliers      Supplier[]
+  customers      Customer[]
   journalEntries JournalEntry[]
-  conversations Conversation[]
+  conversations  Conversation[]
 }
 
 model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
-  name          String?
-  password      String
-  phone         String?       @unique
-  phoneHash     String?       @unique
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  memberships   Membership[]
-  sentMessages  Message[]     @relation("sentMessages")
-  readStatuses  MessageReadStatus[]
-  participations Participant[]
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  name               String?
+  password           String
+  phone              String?             @unique
+  phoneHash          String?             @unique
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  memberships        Membership[]
+  sentMessages       Message[]           @relation("sentMessages")
+  readStatuses       MessageReadStatus[]
+  participations     Participant[]
+  notifications      Notification[]
+  membershipRequests MembershipRequest[]
 }
 
 model Membership {
   id        String   @id @default(cuid())
   userId    String
   companyId String
-  role      String
+  role      String // e.g., "admin", "manager", "accountant"
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -52,20 +54,29 @@ model Membership {
   @@unique([userId, companyId])
 }
 
+model MembershipRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  status    String   @default("pending") // pending, approved, rejected
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
 model Account {
-  id          String   @id @default(cuid())
-  name        String
-  code        String
-  type        String
-  isDebit     Boolean
-  parentCode  String?
-  description String?
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id            String         @id @default(cuid())
+  name          String
+  code          String
+  type          String
+  isDebit       Boolean
+  parentCode    String?
+  description   String?
+  companyId     String
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   debitEntries  JournalEntry[] @relation("DebitEntries")
   creditEntries JournalEntry[] @relation("CreditEntries")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@unique([companyId, code])
 }
@@ -142,6 +153,17 @@ model Purchase {
   supplierId  String
   supplier    Supplier @relation(fields: [supplierId], references: [id])
   createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  isRead    Boolean  @default(false)
+  entityId  String?
+  createdAt DateTime @default(now())
 }
 
 model Conversation {

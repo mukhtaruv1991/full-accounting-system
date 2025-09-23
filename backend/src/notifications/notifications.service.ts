@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { NotificationsGateway } from './notifications.gateway';
-import { Notification } from '@prisma/client';
+import { Notification, Prisma } from '@prisma/client';
 
 @Injectable()
 export class NotificationsService {
@@ -10,19 +10,11 @@ export class NotificationsService {
     private gateway: NotificationsGateway,
   ) {}
 
-  async create(data: {
-    userId: string;
-    type: string;
-    message: string;
-    entityId?: string;
-  }): Promise<Notification> {
+  async create(data: Prisma.NotificationUncheckedCreateInput): Promise<Notification> {
     const notification = await this.prisma.notification.create({
       data,
     });
-
-    // Emit a real-time event to the specific user
     this.gateway.sendToUser(data.userId, 'new_notification', notification);
-
     return notification;
   }
 
