@@ -12,7 +12,7 @@ export interface AccountingDB extends DBSchema {
   friends: { key: string; value: any; };
 }
 
-// A type for the names of our object stores
+// Explicitly define the type for store names to ensure type safety.
 type StoreName = keyof AccountingDB;
 
 class LocalApi {
@@ -29,9 +29,10 @@ class LocalApi {
       const dbName = `${this.dbNamePrefix}${this.companyId}`;
       this.dbPromise = openDB<AccountingDB>(dbName, 1, {
         upgrade(db) {
-          // CORRECTED: Explicitly type the array to satisfy TypeScript's strictness
-          const stores: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
-          stores.forEach(storeName => {
+          // FORCE-UPDATE-MARKER: This array is now explicitly typed as StoreName[]
+          const objectStoreNames: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
+          
+          objectStoreNames.forEach(storeName => {
             if (!db.objectStoreNames.contains(storeName)) {
               db.createObjectStore(storeName, { keyPath: 'id' });
             }
@@ -61,7 +62,7 @@ class LocalApi {
     return this.dbPromise;
   }
 
-  // Generic CRUD methods using the StoreName type
+  // Generic CRUD methods
   async get(storeName: StoreName) { const db = await this.getDb(); return db.getAll(storeName); }
   async getById(storeName: StoreName, key: string) { const db = await this.getDb(); return db.get(storeName, key); }
   async post(storeName: StoreName, value: any) { const db = await this.getDb(); return db.add(storeName, { ...value, id: value.id || crypto.randomUUID() }); }
