@@ -56,7 +56,7 @@ export class UsersService {
       }
     });
 
-    await this.prisma.membershipRequest.create({
+    await this.prisma.joinRequest.create({
       data: {
         userId: user.id,
         companyId: companyIdToJoin,
