@@ -9,7 +9,7 @@ export interface AccountingDB extends DBSchema {
   sales: { key: string; value: any; };
   purchases: { key: string; value: any; };
   journal_entries: { key: string; value: any; };
-  friends: { key: string; value: any; }; // New store for synced contacts
+  friends: { key: string; value: any; };
 }
 
 // A type for the names of our object stores
@@ -17,7 +17,7 @@ type StoreName = keyof AccountingDB;
 
 class LocalApi {
   private dbNamePrefix = 'accounting-app-';
-  private companyId: string | null = 'default'; // Default to a local-only DB
+  private companyId: string | null = 'default';
   private dbPromise: Promise<IDBPDatabase<AccountingDB>> | null = null;
 
   constructor() {
@@ -29,7 +29,7 @@ class LocalApi {
       const dbName = `${this.dbNamePrefix}${this.companyId}`;
       this.dbPromise = openDB<AccountingDB>(dbName, 1, {
         upgrade(db) {
-          // Correctly typed array of store names
+          // CORRECTED: Explicitly type the array to satisfy TypeScript's strictness
           const stores: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
           stores.forEach(storeName => {
             if (!db.objectStoreNames.contains(storeName)) {
@@ -44,7 +44,7 @@ class LocalApi {
   setCompanyId(companyId: string | null) {
     if (this.companyId !== companyId) {
       this.companyId = companyId || 'default';
-      this.initDb(); // Re-initialize the database connection for the new company
+      this.initDb();
     }
   }
 
@@ -61,11 +61,11 @@ class LocalApi {
     return this.dbPromise;
   }
 
-  // Generic methods
-  async getAll(storeName: StoreName) { const db = await this.getDb(); return db.getAll(storeName); }
+  // Generic CRUD methods using the StoreName type
+  async get(storeName: StoreName) { const db = await this.getDb(); return db.getAll(storeName); }
   async getById(storeName: StoreName, key: string) { const db = await this.getDb(); return db.get(storeName, key); }
-  async add(storeName: StoreName, value: any) { const db = await this.getDb(); return db.add(storeName, { ...value, id: value.id || crypto.randomUUID() }); }
-  async put(storeName: StoreName, value: any) { const db = await this.getDb(); return db.put(storeName, value); }
+  async post(storeName: StoreName, value: any) { const db = await this.getDb(); return db.add(storeName, { ...value, id: value.id || crypto.randomUUID() }); }
+  async put(storeName: StoreName, key: string, value: any) { const db = await this.getDb(); return db.put(storeName, { ...value, id: key }); }
   async delete(storeName: StoreName, key: string) { const db = await this.getDb(); return db.delete(storeName, key); }
 }
 
