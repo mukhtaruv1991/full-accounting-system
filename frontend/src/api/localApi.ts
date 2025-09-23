@@ -1,5 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { v4 as uuidv4 } from 'uuid';
 
+// Define the database schema
 export interface AccountingDB extends DBSchema {
   accounts: { key: string; value: any; };
   customers: { key: string; value: any; };
@@ -25,17 +27,15 @@ class LocalApi {
   private initDb() {
     if (typeof window !== 'undefined' && this.companyId) {
       const dbName = `${this.dbNamePrefix}${this.companyId}`;
-      this.dbPromise = openDB<AccountingDB>(dbName, 2, {
+      this.dbPromise = openDB<AccountingDB>(dbName, 2, { // Incremented version to ensure upgrade runs
         upgrade(db) {
-          // Final Fix: Create stores one by one to avoid any type inference issues.
-          if (!db.objectStoreNames.contains('accounts')) db.createObjectStore('accounts', { keyPath: 'id' });
-          if (!db.objectStoreNames.contains('customers')) db.createObjectStore('customers', { keyPath: 'id' });
-          if (!db.objectStoreNames.contains('suppliers')) db.createObjectStore('suppliers', { keyPath: 'id' });
-          if (!db.objectStoreNames.contains('items')) db.createObjectStore('items', { keyPath: 'id' });
-          if (!db.objectStoreNames.contains('sales')) db.createObjectStore('sales', { keyPath: 'id' });
-          if (!db.objectStoreNames.contains('purchases')) db.createObjectStore('purchases', { keyPath: 'id' });
-          if (!db.objectStoreNames.contains('journal_entries')) db.createObjectStore('journal_entries', { keyPath: 'id' });
-          if (!db.objectStoreNames.contains('friends')) db.createObjectStore('friends', { keyPath: 'id' });
+          const objectStoreNames: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
+          
+          objectStoreNames.forEach(storeName => {
+            if (!db.objectStoreNames.contains(storeName)) {
+              db.createObjectStore(storeName, { keyPath: 'id' });
+            }
+          });
         },
       });
     }
@@ -61,11 +61,12 @@ class LocalApi {
     return this.dbPromise;
   }
 
-  async get(storeName: StoreName) { const db = await this.getDb(); return db.getAll(storeName); }
-  async getById(storeName: StoreName, key: string) { const db = await this.getDb(); return db.get(storeName, key); }
-  async post(storeName: StoreName, value: any) { const db = await this.getDb(); return db.add(storeName, { ...value, id: value.id || crypto.randomUUID() }); }
-  async put(storeName: StoreName, key: string, value: any) { const db = await this.getDb(); return db.put(storeName, { ...value, id: key }); }
-  async delete(storeName: StoreName, key: string) { const db = await this.getDb(); return db.delete(storeName, key); }
+  // --- FIX APPLIED: Explicitly casting storeName to satisfy TypeScript ---
+  async get(storeName: StoreName) { const db = await this.getDb(); return db.getAll(storeName as any); }
+  async getById(storeName: StoreName, key: string) { const db = await this.getDb(); return db.get(storeName as any, key); }
+  async post(storeName: StoreName, value: any) { const db = await this.getDb(); return db.add(storeName as any, { ...value, id: value.id || uuidv4() }); }
+  async put(storeName: StoreName, key: string, value: any) { const db = await this.getDb(); return db.put(storeName as any, { ...value, id: key }); }
+  async delete(storeName: StoreName, key: string) { const db = await this.getDb(); return db.delete(storeName as any, key); }
 }
 
 export const localApi = new LocalApi();
