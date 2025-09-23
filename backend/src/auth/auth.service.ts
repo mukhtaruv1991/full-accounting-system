@@ -30,7 +30,7 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(payload),
-      memberships: memberships, // Send memberships to the client
+      memberships: memberships,
     };
   }
 }

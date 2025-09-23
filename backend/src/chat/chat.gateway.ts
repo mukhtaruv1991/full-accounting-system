@@ -9,7 +9,8 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
-import { Logger } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common'; // Correct import
+import { WsJwtGuard } from '../auth/ws-jwt.guard';
 
 interface ChatPayload {
   conversationId: string;
@@ -17,7 +18,7 @@ interface ChatPayload {
   type: 'text' | 'image' | 'audio';
 }
 
-@UseGuards(WsJwtGuard)
+@UseGuards(WsJwtGuard) // Apply the guard
 @WebSocketGateway({
   cors: { origin: '*' },
   namespace: 'chat',
@@ -52,8 +53,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: ChatPayload,
   ): Promise<void> {
-    // TODO: استخلاص هوية المستخدم الحقيقية من الـ token
-    const senderId = client.data.user.id; 
+    const senderId = client.data.user.id; // Use real user ID from guard
 
     const savedMessage = await this.chatService.createMessage(
       senderId,
@@ -62,7 +62,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       payload.type,
     );
 
-    // بث الرسالة المحفوظة إلى جميع المشاركين في الغرفة
     this.server.to(payload.conversationId).emit('receiveMessage', savedMessage);
     
     this.logger.log(`Message from ${senderId} sent to room ${payload.conversationId}`);

@@ -25,14 +25,17 @@ class LocalApi {
   private initDb() {
     if (typeof window !== 'undefined' && this.companyId) {
       const dbName = `${this.dbNamePrefix}${this.companyId}`;
-      this.dbPromise = openDB<AccountingDB>(dbName, 2, { // Incremented version to ensure upgrade runs
-        upgrade(db, oldVersion, newVersion, transaction) {
-          const storesToCreate: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
-          storesToCreate.forEach(storeName => {
-            if (!db.objectStoreNames.contains(storeName)) {
-              db.createObjectStore(storeName, { keyPath: 'id' });
-            }
-          });
+      this.dbPromise = openDB<AccountingDB>(dbName, 2, {
+        upgrade(db) {
+          // Final Fix: Create stores one by one to avoid any type inference issues.
+          if (!db.objectStoreNames.contains('accounts')) db.createObjectStore('accounts', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('customers')) db.createObjectStore('customers', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('suppliers')) db.createObjectStore('suppliers', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('items')) db.createObjectStore('items', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('sales')) db.createObjectStore('sales', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('purchases')) db.createObjectStore('purchases', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('journal_entries')) db.createObjectStore('journal_entries', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('friends')) db.createObjectStore('friends', { keyPath: 'id' });
         },
       });
     }
