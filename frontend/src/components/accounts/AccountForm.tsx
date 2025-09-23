@@ -30,9 +30,9 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) 
   return (
     <form onSubmit={handleSubmit}>
       <Grid container spacing={2}>
-        <Grid xs={12} sm={6}><TextField name="name" label={t('account_name')} value={formData.name} onChange={handleChange} fullWidth required /></Grid>
-        <Grid xs={12} sm={6}><TextField name="code" label={t('account_code')} value={formData.code} onChange={handleChange} fullWidth required /></Grid>
-        <Grid xs={12} sm={6}>
+        <Grid item xs={12} sm={6}><TextField name="name" label={t('account_name')} value={formData.name} onChange={handleChange} fullWidth required /></Grid>
+        <Grid item xs={12} sm={6}><TextField name="code" label={t('account_code')} value={formData.code} onChange={handleChange} fullWidth required /></Grid>
+        <Grid item xs={12} sm={6}>
           <FormControl fullWidth required>
             <InputLabel>{t('account_type')}</InputLabel>
             <Select name="type" value={formData.type} label={t('account_type')} onChange={handleChange}>
@@ -44,10 +44,10 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSave, onCancel }) 
             </Select>
           </FormControl>
         </Grid>
-        <Grid xs={12} sm={6}><TextField name="parentCode" label={t('parent_code')} value={formData.parentCode} onChange={handleChange} fullWidth /></Grid>
-        <Grid xs={12}><TextField name="description" label={t('description')} value={formData.description} onChange={handleChange} fullWidth multiline rows={2} /></Grid>
-        <Grid xs={12}><FormControlLabel control={<Checkbox name="isDebit" checked={formData.isDebit} onChange={handleChange} />} label={t('is_debit_nature')} /></Grid>
-        <Grid xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Grid item xs={12} sm={6}><TextField name="parentCode" label={t('parent_code')} value={formData.parentCode} onChange={handleChange} fullWidth /></Grid>
+        <Grid item xs={12}><TextField name="description" label={t('description')} value={formData.description} onChange={handleChange} fullWidth multiline rows={2} /></Grid>
+        <Grid item xs={12}><FormControlLabel control={<Checkbox name="isDebit" checked={formData.isDebit} onChange={handleChange} />} label={t('is_debit_nature')} /></Grid>
+        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button onClick={onCancel}>{t('cancel')}</Button>
           <Button type="submit" variant="contained">{t('save')}</Button>
         </Grid>

@@ -38,10 +38,10 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ entry, accounts, on
     <form onSubmit={handleSubmit}>
       {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
       <Grid container spacing={2}>
-        <Grid xs={12}><TextField name="description" label={t('description')} value={formData.description} onChange={handleChange} fullWidth required multiline rows={2} /></Grid>
-        <Grid xs={12} sm={6}><TextField name="date" label={t('date')} type="date" value={formData.date} onChange={handleChange} fullWidth required InputLabelProps={{ shrink: true }} /></Grid>
-        <Grid xs={12} sm={6}><TextField name="amount" label={t('amount')} type="number" value={formData.amount} onChange={handleChange} fullWidth required inputProps={{ step: "0.01" }} /></Grid>
-        <Grid xs={12} sm={6}>
+        <Grid item xs={12}><TextField name="description" label={t('description')} value={formData.description} onChange={handleChange} fullWidth required multiline rows={2} /></Grid>
+        <Grid item xs={12} sm={6}><TextField name="date" label={t('date')} type="date" value={formData.date} onChange={handleChange} fullWidth required InputLabelProps={{ shrink: true }} /></Grid>
+        <Grid item xs={12} sm={6}><TextField name="amount" label={t('amount')} type="number" value={formData.amount} onChange={handleChange} fullWidth required inputProps={{ step: "0.01" }} /></Grid>
+        <Grid item xs={12} sm={6}>
           <FormControl fullWidth required>
             <InputLabel>{t('debit_account')}</InputLabel>
             <Select name="debitAccountId" value={formData.debitAccountId} label={t('debit_account')} onChange={handleChange}>
@@ -49,7 +49,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ entry, accounts, on
             </Select>
           </FormControl>
         </Grid>
-        <Grid xs={12} sm={6}>
+        <Grid item xs={12} sm={6}>
           <FormControl fullWidth required>
             <InputLabel>{t('credit_account')}</InputLabel>
             <Select name="creditAccountId" value={formData.creditAccountId} label={t('credit_account')} onChange={handleChange}>
@@ -57,7 +57,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ entry, accounts, on
             </Select>
           </FormControl>
         </Grid>
-        <Grid xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button onClick={onCancel}>{t('cancel')}</Button>
           <Button type="submit" variant="contained">{t('save')}</Button>
         </Grid>

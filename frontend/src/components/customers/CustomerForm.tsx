@@ -30,10 +30,10 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSave, onCancel 
   return (
     <form onSubmit={handleSubmit}>
       <Grid container spacing={2}>
-        <Grid xs={12}><TextField name="name" label={t('name')} value={formData.name} onChange={handleChange} fullWidth required /></Grid>
-        <Grid xs={12} sm={6}><TextField name="email" label={t('email')} type="email" value={formData.email} onChange={handleChange} fullWidth /></Grid>
-        <Grid xs={12} sm={6}><TextField name="phone" label={t('phone')} value={formData.phone} onChange={handleChange} fullWidth /></Grid>
-        <Grid xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Grid item xs={12}><TextField name="name" label={t('name')} value={formData.name} onChange={handleChange} fullWidth required /></Grid>
+        <Grid item xs={12} sm={6}><TextField name="email" label={t('email')} type="email" value={formData.email} onChange={handleChange} fullWidth /></Grid>
+        <Grid item xs={12} sm={6}><TextField name="phone" label={t('phone')} value={formData.phone} onChange={handleChange} fullWidth /></Grid>
+        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button onClick={onCancel}>{t('cancel')}</Button>
           <Button type="submit" variant="contained">{t('save')}</Button>
         </Grid>
