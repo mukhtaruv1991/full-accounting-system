@@ -164,7 +164,7 @@ const InvoicePage: React.FC = () => {
       <Snackbar open={!!success} autoHideDuration={6000} onClose={() => setSuccess('')} message={success} />
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
+        <Grid xs={12} sm={4}>
           <FormControl fullWidth>
             <InputLabel>{t('type')}</InputLabel>
             <Select value={invoiceType} label={t('type')} onChange={(e) => setInvoiceType(e.target.value as 'sale' | 'purchase')}>
@@ -173,7 +173,7 @@ const InvoicePage: React.FC = () => {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid xs={12} sm={4}>
           <Autocomplete
             options={contacts}
             getOptionLabel={(option) => option.name}
@@ -182,7 +182,7 @@ const InvoicePage: React.FC = () => {
             renderInput={(params) => <TextField {...params} label={t(invoiceType === 'sale' ? 'customer' : 'supplier')} />}
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid xs={12} sm={4}>
           <TextField type="date" label={t('date')} value={date} onChange={(e) => setDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
         </Grid>
       </Grid>

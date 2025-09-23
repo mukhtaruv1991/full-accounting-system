@@ -35,11 +35,11 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSave, onCancel }) => {
   return (
     <form onSubmit={handleSubmit}>
       <Grid container spacing={2}>
-        <Grid item xs={12}><TextField name="name" label={t('name')} value={formData.name} onChange={handleChange} fullWidth required /></Grid>
-        <Grid item xs={12}><TextField name="description" label={t('description')} value={formData.description} onChange={handleChange} fullWidth multiline rows={2} /></Grid>
-        <Grid item xs={12} sm={6}><TextField name="price" label={t('price')} type="number" value={formData.price} onChange={handleChange} fullWidth required inputProps={{ step: "0.01" }} /></Grid>
-        <Grid item xs={12} sm={6}><TextField name="cost" label={t('cost')} type="number" value={formData.cost} onChange={handleChange} fullWidth required inputProps={{ step: "0.01" }} /></Grid>
-        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Grid xs={12}><TextField name="name" label={t('name')} value={formData.name} onChange={handleChange} fullWidth required /></Grid>
+        <Grid xs={12}><TextField name="description" label={t('description')} value={formData.description} onChange={handleChange} fullWidth multiline rows={2} /></Grid>
+        <Grid xs={12} sm={6}><TextField name="price" label={t('price')} type="number" value={formData.price} onChange={handleChange} fullWidth required inputProps={{ step: "0.01" }} /></Grid>
+        <Grid xs={12} sm={6}><TextField name="cost" label={t('cost')} type="number" value={formData.cost} onChange={handleChange} fullWidth required inputProps={{ step: "0.01" }} /></Grid>
+        <Grid xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button onClick={onCancel}>{t('cancel')}</Button>
           <Button type="submit" variant="contained">{t('save')}</Button>
         </Grid>

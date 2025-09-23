@@ -97,21 +97,21 @@ const DashboardPage: React.FC = () => {
       <Typography variant="h4" gutterBottom>{t('dashboard')}</Typography>
       <Grid container spacing={3}>
         {/* Summary Cards */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2, display: 'flex', alignItems: 'center' }}><PointOfSaleIcon color="primary" sx={{ fontSize: 40, mr: 2 }} /><Box><Typography color="text.secondary">{t('sales')}</Typography><Typography variant="h5" component="p">${summary?.totalSales.toFixed(2)}</Typography></Box></Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2, display: 'flex', alignItems: 'center' }}><ShoppingCartIcon color="secondary" sx={{ fontSize: 40, mr: 2 }} /><Box><Typography color="text.secondary">{t('purchases')}</Typography><Typography variant="h5" component="p">${summary?.totalPurchases.toFixed(2)}</Typography></Box></Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2, display: 'flex', alignItems: 'center' }}><PeopleIcon color="success" sx={{ fontSize: 40, mr: 2 }} /><Box><Typography color="text.secondary">{t('customers')}</Typography><Typography variant="h5" component="p">{summary?.customerCount}</Typography></Box></Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2, display: 'flex', alignItems: 'center' }}><InventoryIcon color="warning" sx={{ fontSize: 40, mr: 2 }} /><Box><Typography color="text.secondary">{t('items')}</Typography><Typography variant="h5" component="p">{summary?.itemCount}</Typography></Box></Paper>
         </Grid>
 
         {/* Chart */}
-        <Grid item xs={12} md={8}>
+        <Grid xs={12} md={8}>
           <Paper sx={{ p: 2, height: 300 }}>
             <Typography variant="h6" gutterBottom>Monthly Performance</Typography>
             <ResponsiveContainer>
@@ -129,7 +129,7 @@ const DashboardPage: React.FC = () => {
         </Grid>
 
         {/* Recent Activities */}
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Paper sx={{ p: 2, height: 300, overflowY: 'auto' }}>
             <Typography variant="h6" gutterBottom>Recent Activities</Typography>
             <List>

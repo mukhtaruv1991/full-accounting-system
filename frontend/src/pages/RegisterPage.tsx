@@ -66,7 +66,7 @@ const RegisterPage: React.FC = () => {
         
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <FormControl fullWidth>
                 <InputLabel>{t('account_type')}</InputLabel>
                 <Select
@@ -82,32 +82,32 @@ const RegisterPage: React.FC = () => {
             </Grid>
 
             {/* Common Fields */}
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <TextField name="name" label={t('your_name')} value={formData.name} onChange={handleChange} fullWidth required />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <TextField name="phone" label={t('your_phone')} value={formData.phone} onChange={handleChange} fullWidth required />
             </Grid>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField name="email" label={t('email')} type="email" value={formData.email} onChange={handleChange} fullWidth required />
             </Grid>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField name="password" label={t('password')} type="password" value={formData.password} onChange={handleChange} fullWidth required />
             </Grid>
 
             {/* Admin Fields */}
             {accountType === 'admin' && (
               <>
-                <Grid item xs={12}>
+                <Grid xs={12}>
                   <Typography variant="subtitle1" sx={{ mt: 2 }}>{t('company_details')}</Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid xs={12}>
                   <TextField name="companyName" label={t('company_name')} value={formData.companyName} onChange={handleChange} fullWidth required />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid xs={12}>
                   <TextField name="companyAddress" label={t('company_address')} value={formData.companyAddress} onChange={handleChange} fullWidth />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid xs={12}>
                   <TextField name="companyPhone" label={t('company_phone')} value={formData.companyPhone} onChange={handleChange} fullWidth />
                 </Grid>
               </>
@@ -115,7 +115,7 @@ const RegisterPage: React.FC = () => {
 
             {/* Manager Fields */}
             {accountType === 'manager' && (
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <TextField name="companyIdToJoin" label={t('company_id_to_join')} value={formData.companyIdToJoin} onChange={handleChange} fullWidth required helperText={t('ask_admin_for_id')} />
               </Grid>
             )}
