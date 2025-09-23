@@ -11,207 +11,191 @@ datasource db {
 }
 
 model Company {
-  id        String   @id @default(cuid())
-  name      String
-  address   String?
-  phone     String?
-  phoneHash String? @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  users     User[]
-  accounts  Account[]
-  customers Customer[]
-  suppliers Supplier[]
-  items     Item[]
-  sales     Sale[]
-  purchases Purchase[]
-  journalEntries JournalEntry[]
+  id          String        @id @default(cuid())
+  name        String
+  address     String?
+  phone       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   memberships Membership[]
-  membershipRequests MembershipRequest[]
+  accounts    Account[]
+  items       Item[]
+  sales       Sale[]
+  purchases   Purchase[]
+  suppliers   Supplier[]
+  customers   Customer[]
+  journalEntries JournalEntry[]
+  conversations Conversation[]
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  phone     String?  @unique
-  phoneHash String? @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  memberships Membership[]
-  sentRequests MembershipRequest[] @relation("SentRequests")
-  receivedRequests MembershipRequest[] @relation("ReceivedRequests")
-  notifications Notification[]
+  id            String        @id @default(cuid())
+  email         String        @unique
+  name          String?
+  password      String
+  phone         String?       @unique
+  phoneHash     String?       @unique
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  memberships   Membership[]
+  sentMessages  Message[]     @relation("sentMessages")
+  readStatuses  MessageReadStatus[]
+  participations Participant[]
 }
 
 model Membership {
-  id          String   @id @default(cuid())
-  userId      String
-  companyId   String
-  role        String   // e.g., 'admin', 'manager', 'customer', 'supplier', 'viewer'
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String   // e.g., "admin", "manager", "accountant"
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
   @@unique([userId, companyId])
 }
 
-model MembershipRequest {
-  id          String   @id @default(cuid())
-  type        String   // 'JOIN_REQUEST' or 'INVITATION'
-  role        String   // The role being requested/offered
-  status      String   @default("pending") // 'pending', 'approved', 'rejected'
-  requesterId String   // User who initiated the request
-  targetId    String   // User or Company being targeted
-  companyId   String   // The company this request is for
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  requester   User     @relation("SentRequests", fields: [requesterId], references: [id], onDelete: Cascade)
-  targetUser  User?    @relation("ReceivedRequests", fields: [targetId], references: [id], onDelete: Cascade)
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-}
-
-model Notification {
-  id          String    @id @default(cuid())
-  userId      String    // The user who will receive the notification
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String    // e.g., 'NEW_INVOICE', 'MEMBERSHIP_REQUEST', 'NEW_MESSAGE'
-  message     String
-  entityId    String?   // ID of the related entity (e.g., invoiceId, requestId)
-  isRead      Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-}
+// --- المحاسبة ---
 
 model Account {
   id          String   @id @default(cuid())
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  code        String
   name        String
-  type        String
+  code        String
+  type        String   // Asset, Liability, Equity, Revenue, Expense
+  isDebit     Boolean  // true if debit nature, false if credit
   parentCode  String?
   description String?
-  isDebit     Boolean  @default(true)
-  balance     Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   debitEntries  JournalEntry[] @relation("DebitEntries")
   creditEntries JournalEntry[] @relation("CreditEntries")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@unique([companyId, code])
-}
-
-model Customer {
-  id        String   @id @default(cuid())
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name      String
-  email     String?
-  phone     String?
-  phoneHash String? @unique
-  address   String?
-  balance   Float    @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  sales     Sale[]
-}
-
-model Supplier {
-  id        String   @id @default(cuid())
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name      String
-  email     String?
-  phone     String?
-  phoneHash String? @unique
-  address   String?
-  balance   Float    @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  purchases Purchase[]
-}
-
-model Item {
-  id          String   @id @default(cuid())
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  price       Float
-  cost        Float
-  quantity    Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  saleItems   SaleItem[]
-  purchaseItems PurchaseItem[]
-}
-
-model Sale {
-  id          String   @id @default(cuid())
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  date        DateTime
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id])
-  totalAmount Float
-  status      String
-  items       SaleItem[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model SaleItem {
-  id        String   @id @default(cuid())
-  saleId    String
-  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  itemId    String
-  item      Item     @relation(fields: [itemId], references: [id])
-  quantity  Float
-  price     Float
-  total     Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Purchase {
-  id          String   @id @default(cuid())
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  date        DateTime
-  supplierId  String
-  supplier    Supplier @relation(fields: [supplierId], references: [id])
-  totalAmount Float
-  status      String
-  items       PurchaseItem[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model PurchaseItem {
-  id         String   @id @default(cuid())
-  purchaseId String
-  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  itemId     String
-  item       Item     @relation(fields: [itemId], references: [id])
-  quantity   Float
-  cost       Float
-  total      Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 }
 
 model JournalEntry {
   id              String   @id @default(cuid())
-  companyId       String
-  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   date            DateTime
   description     String
-  debitAccountId  String
-  creditAccountId String
   debitAmount     Float
   creditAmount    Float
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  debitAccountId  String
+  creditAccountId String
   debitAccount    Account  @relation("DebitEntries", fields: [debitAccountId], references: [id])
   creditAccount   Account  @relation("CreditEntries", fields: [creditAccountId], references: [id])
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+}
+
+// --- المخزون والمبيعات ---
+
+model Item {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float    // سعر البيع
+  cost        Float    // سعر الشراء
+  quantity    Int      @default(0)
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sales     Sale[]
+  createdAt DateTime @default(now())
+}
+
+model Supplier {
+  id        String     @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  companyId String
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchases Purchase[]
+  createdAt DateTime   @default(now())
+}
+
+model Sale {
+  id          String   @id @default(cuid())
+  date        DateTime
+  totalAmount Float
+  status      String   // e.g., "Completed", "Pending"
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Purchase {
+  id          String   @id @default(cuid())
+  date        DateTime
+  totalAmount Float
+  status      String
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+// --- المحادثات ---
+
+model Conversation {
+  id           String        @id @default(cuid())
+  name         String? // للمحادثات الجماعية
+  isGroup      Boolean       @default(false)
+  companyId    String?       // لربط المحادثات الجماعية بالشركة
+  company      Company?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  messages     Message[]
+  participants Participant[]
+}
+
+model Participant {
+  id             String       @id @default(cuid())
+  userId         String
+  conversationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime     @default(now())
+
+  @@unique([userId, conversationId])
+}
+
+model Message {
+  id             String              @id @default(cuid())
+  content        String
+  type           String              @default("text") // text, image, audio, file
+  senderId       String
+  conversationId String
+  sender         User                @relation("sentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+  readStatuses   MessageReadStatus[]
+  deletedFor     String[] // Array of user IDs who have deleted this message
+}
+
+model MessageReadStatus {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
 }
