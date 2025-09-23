@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -47,7 +44,7 @@ model Membership {
   id        String   @id @default(cuid())
   userId    String
   companyId String
-  role      String   // e.g., "admin", "manager", "accountant"
+  role      String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -55,14 +52,12 @@ model Membership {
   @@unique([userId, companyId])
 }
 
-// --- المحاسبة ---
-
 model Account {
   id          String   @id @default(cuid())
   name        String
   code        String
-  type        String   // Asset, Liability, Equity, Revenue, Expense
-  isDebit     Boolean  // true if debit nature, false if credit
+  type        String
+  isDebit     Boolean
   parentCode  String?
   description String?
   companyId   String
@@ -90,14 +85,12 @@ model JournalEntry {
   createdAt       DateTime @default(now())
 }
 
-// --- المخزون والمبيعات ---
-
 model Item {
   id          String   @id @default(cuid())
   name        String
   description String?
-  price       Float    // سعر البيع
-  cost        Float    // سعر الشراء
+  price       Float
+  cost        Float
   quantity    Int      @default(0)
   companyId   String
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -131,7 +124,7 @@ model Sale {
   id          String   @id @default(cuid())
   date        DateTime
   totalAmount Float
-  status      String   // e.g., "Completed", "Pending"
+  status      String
   companyId   String
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   customerId  String
@@ -151,13 +144,11 @@ model Purchase {
   createdAt   DateTime @default(now())
 }
 
-// --- المحادثات ---
-
 model Conversation {
   id           String        @id @default(cuid())
-  name         String? // للمحادثات الجماعية
+  name         String?
   isGroup      Boolean       @default(false)
-  companyId    String?       // لربط المحادثات الجماعية بالشركة
+  companyId    String?
   company      Company?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -179,14 +170,14 @@ model Participant {
 model Message {
   id             String              @id @default(cuid())
   content        String
-  type           String              @default("text") // text, image, audio, file
+  type           String              @default("text")
   senderId       String
   conversationId String
   sender         User                @relation("sentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   createdAt      DateTime            @default(now())
   readStatuses   MessageReadStatus[]
-  deletedFor     String[] // Array of user IDs who have deleted this message
+  deletedFor     String[]
 }
 
 model MessageReadStatus {
