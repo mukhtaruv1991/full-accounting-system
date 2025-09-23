@@ -1,0 +1,254 @@
+/data/data/com.termux/files/home/full-accounting-system
+├── .env
+├── .github
+│   └── workflows
+│       └── build-and-autofix.yml
+├── .gitignore
+├── PROJECT_STATUS.md
+├── README.md
+├── backend
+│   ├── package.json
+│   ├── pnpm-lock.yaml
+│   ├── prisma
+│   │   ├── schema.prisma
+│   │   └── seed.ts
+│   ├── src
+│   │   ├── accounts
+│   │   │   ├── accounts.controller.spec.ts
+│   │   │   ├── accounts.controller.ts
+│   │   │   ├── accounts.module.ts
+│   │   │   ├── accounts.service.spec.ts
+│   │   │   └── accounts.service.ts
+│   │   ├── app.controller.ts
+│   │   ├── app.module.ts
+│   │   ├── app.service.ts
+│   │   ├── audit
+│   │   │   └── audit.interceptor.ts
+│   │   ├── auth
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.module.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── current-user.decorator.ts
+│   │   │   ├── jwt-auth.guard.ts
+│   │   │   ├── jwt.strategy.ts
+│   │   │   └── ws-jwt.guard.ts
+│   │   ├── chat
+│   │   │   ├── chat.controller.ts
+│   │   │   ├── chat.gateway.ts
+│   │   │   ├── chat.module.ts
+│   │   │   └── chat.service.ts
+│   │   ├── companies
+│   │   │   ├── companies.controller.ts
+│   │   │   ├── companies.module.ts
+│   │   │   └── companies.service.ts
+│   │   ├── customers
+│   │   │   ├── customers.controller.ts
+│   │   │   ├── customers.module.ts
+│   │   │   └── customers.service.ts
+│   │   ├── items
+│   │   │   ├── items.controller.ts
+│   │   │   ├── items.module.ts
+│   │   │   └── items.service.ts
+│   │   ├── journal-entries
+│   │   │   ├── journal-entries.controller.ts
+│   │   │   ├── journal-entries.module.ts
+│   │   │   └── journal-entries.service.ts
+│   │   ├── main.ts
+│   │   ├── notifications
+│   │   │   ├── notifications.controller.ts
+│   │   │   ├── notifications.gateway.ts
+│   │   │   ├── notifications.module.ts
+│   │   │   ├── notifications.service.spec.ts
+│   │   │   └── notifications.service.ts
+│   │   ├── pages
+│   │   │   ├── customers
+│   │   │   ├── items
+│   │   │   └── suppliers
+│   │   ├── prisma
+│   │   │   ├── prisma.module.ts
+│   │   │   └── prisma.service.ts
+│   │   ├── prisma.module.ts
+│   │   ├── prisma.service.ts
+│   │   ├── purchases
+│   │   │   ├── purchases.controller.ts
+│   │   │   ├── purchases.module.ts
+│   │   │   └── purchases.service.ts
+│   │   ├── reports
+│   │   │   ├── reports.module.ts
+│   │   │   └── reports.service.ts
+│   │   ├── sales
+│   │   │   ├── sales.controller.ts
+│   │   │   ├── sales.module.ts
+│   │   │   └── sales.service.ts
+│   │   ├── suppliers
+│   │   │   ├── suppliers.controller.ts
+│   │   │   ├── suppliers.module.ts
+│   │   │   └── suppliers.service.ts
+│   │   ├── uploads
+│   │   │   ├── uploads.controller.ts
+│   │   │   └── uploads.module.ts
+│   │   └── users
+│   │       ├── users.controller.ts
+│   │       ├── users.module.ts
+│   │       └── users.service.ts
+│   ├── tsconfig.build.json
+│   └── tsconfig.json
+├── frontend
+│   ├── .env
+│   ├── .gitignore
+│   ├── README.md
+│   ├── craco.config.js
+│   ├── frontend
+│   │   ├── package.json
+│   │   └── src
+│   │       └── components
+│   │           └── sales
+│   │               └── InvoicePrint.tsx
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── pnpm-lock.yaml
+│   ├── public
+│   │   ├── favicon.ico
+│   │   ├── index.html
+│   │   ├── logo192.png
+│   │   ├── logo512.png
+│   │   ├── manifest.json
+│   │   └── robots.txt
+│   ├── src
+│   │   ├── App.css
+│   │   ├── App.test.tsx
+│   │   ├── App.tsx
+│   │   ├── api
+│   │   │   ├── api.ts
+│   │   │   ├── db.ts
+│   │   │   ├── localApi.ts
+│   │   │   └── socket.ts
+│   │   ├── components
+│   │   │   ├── AppLayout.tsx
+│   │   │   ├── PrivateRoute.tsx
+│   │   │   ├── accounts
+│   │   │   │   └── AccountForm.tsx
+│   │   │   ├── customers
+│   │   │   │   └── CustomerForm.tsx
+│   │   │   ├── dashboard
+│   │   │   │   └── StatCard.tsx
+│   │   │   ├── invoices
+│   │   │   │   └── InvoiceForm.tsx
+│   │   │   ├── items
+│   │   │   │   └── ItemForm.tsx
+│   │   │   ├── journal-entries
+│   │   │   │   └── JournalEntryForm.tsx
+│   │   │   ├── notifications
+│   │   │   │   ├── NotificationBell.tsx
+│   │   │   │   └── NotificationToast.tsx
+│   │   │   ├── purchases
+│   │   │   │   └── PurchaseForm.tsx
+│   │   │   ├── sales
+│   │   │   │   ├── QrScanner.tsx
+│   │   │   │   └── SaleForm.tsx
+│   │   │   └── suppliers
+│   │   │       └── SupplierForm.tsx
+│   │   ├── context
+│   │   │   └── AuthContext.tsx
+│   │   ├── i18n.ts
+│   │   ├── index.css
+│   │   ├── index.tsx
+│   │   ├── locales
+│   │   │   ├── ar
+│   │   │   │   └── translation.json
+│   │   │   ├── ar.json
+│   │   │   ├── en
+│   │   │   │   └── translation.json
+│   │   │   └── en.json
+│   │   ├── logo.svg
+│   │   ├── pages
+│   │   │   ├── CompanySelectionPage.tsx
+│   │   │   ├── DashboardPage.tsx
+│   │   │   ├── HomePage.tsx
+│   │   │   ├── InvoicePage.tsx
+│   │   │   ├── LoginPage.tsx
+│   │   │   ├── MembershipRequestsPage.tsx
+│   │   │   ├── PriceAnalysisPage.tsx
+│   │   │   ├── RegisterPage.tsx
+│   │   │   ├── SettingsPage.tsx
+│   │   │   ├── accounts
+│   │   │   │   └── AccountsPage.tsx
+│   │   │   ├── admin
+│   │   │   │   └── RequestsPage.tsx
+│   │   │   ├── auth
+│   │   │   │   ├── LoginPage.tsx
+│   │   │   │   ├── RegisterPage.tsx
+│   │   │   │   └── SelectCompanyPage.tsx
+│   │   │   ├── chat
+│   │   │   │   ├── ChatListPage.tsx
+│   │   │   │   └── ChatPage.tsx
+│   │   │   ├── customers
+│   │   │   │   └── CustomersPage.tsx
+│   │   │   ├── items
+│   │   │   │   └── ItemsPage.tsx
+│   │   │   ├── journal-entries
+│   │   │   │   └── JournalEntriesPage.tsx
+│   │   │   ├── purchases
+│   │   │   │   └── PurchasesPage.tsx
+│   │   │   ├── sales
+│   │   │   │   └── SalesPage.tsx
+│   │   │   └── suppliers
+│   │   │       └── SuppliersPage.tsx
+│   │   ├── react-app-env.d.ts
+│   │   ├── reportWebVitals.ts
+│   │   ├── setupTests.ts
+│   │   ├── theme
+│   │   │   └── ThemeProvider.tsx
+│   │   └── themes
+│   │       └── theme.tsx
+│   └── tsconfig.json
+├── project_tree.txt
+├── public
+│   ├── pwa-192x192.png
+│   └── pwa-512x512.png
+├── src
+│   ├── App.jsx
+│   ├── App.tsx
+│   ├── accounts
+│   │   ├── accounts.controller.ts
+│   │   ├── accounts.module.ts
+│   │   └── accounts.service.ts
+│   ├── app.controller.ts
+│   ├── app.module.ts
+│   ├── app.service.ts
+│   ├── index.css
+│   ├── items
+│   │   ├── items.controller.ts
+│   │   ├── items.module.ts
+│   │   └── items.service.ts
+│   ├── journal-entries
+│   │   ├── journal-entries.controller.ts
+│   │   ├── journal-entries.module.ts
+│   │   └── journal-entries.service.ts
+│   ├── main.jsx
+│   ├── main.ts
+│   ├── pages
+│   │   ├── customers
+│   │   ├── items
+│   │   │   └── ItemsPage.tsx
+│   │   ├── purchases
+│   │   │   └── PurchasesPage.tsx
+│   │   ├── sales
+│   │   └── suppliers
+│   ├── prisma.service.ts
+│   ├── purchases
+│   │   ├── purchases.controller.ts
+│   │   ├── purchases.module.ts
+│   │   └── purchases.service.ts
+│   ├── sales
+│   │   ├── sales.controller.ts
+│   │   ├── sales.module.ts
+│   │   └── sales.service.ts
+│   └── suppliers
+│       ├── suppliers.controller.ts
+│       ├── suppliers.module.ts
+│       └── suppliers.service.ts
+├── tailwind.config.js
+└── vite.config.ts
+
+76 directories, 176 files
