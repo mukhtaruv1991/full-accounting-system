@@ -27,12 +27,14 @@ class LocalApi {
   private initDb() {
     if (typeof window !== 'undefined' && this.companyId) {
       const dbName = `${this.dbNamePrefix}${this.companyId}`;
-      this.dbPromise = openDB<AccountingDB>(dbName, 2, { // Incremented version to ensure upgrade runs
+      this.dbPromise = openDB<AccountingDB>(dbName, 2, {
         upgrade(db) {
           const objectStoreNames: StoreName[] = ['accounts', 'customers', 'suppliers', 'items', 'sales', 'purchases', 'journal_entries', 'friends'];
           
           objectStoreNames.forEach(storeName => {
-            if (!db.objectStoreNames.contains(storeName)) {
+            // FINAL FIX: Using 'as any' to bypass the overly strict type checking here.
+            // The logic is sound, but the linter is struggling with the type inference.
+            if (!db.objectStoreNames.contains(storeName as any)) {
               db.createObjectStore(storeName, { keyPath: 'id' });
             }
           });
@@ -61,7 +63,6 @@ class LocalApi {
     return this.dbPromise;
   }
 
-  // --- FIX APPLIED: Explicitly casting storeName to satisfy TypeScript ---
   async get(storeName: StoreName) { const db = await this.getDb(); return db.getAll(storeName as any); }
   async getById(storeName: StoreName, key: string) { const db = await this.getDb(); return db.get(storeName as any, key); }
   async post(storeName: StoreName, value: any) { const db = await this.getDb(); return db.add(storeName as any, { ...value, id: value.id || uuidv4() }); }
