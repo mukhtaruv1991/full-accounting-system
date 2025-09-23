@@ -1,0 +1,39 @@
+name: Build & Deploy Web Project
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+        continue-on-error: true
+        id: frontend
+      - name: Build Backend
+        run: |
+          cd backend
+          npm install
+          npm test
+        continue-on-error: true
+        id: backend
+      - name: Send Telegram Notification
+        uses: appleboy/telegram-action@v0.0.6
+        with:
+          to: '1254508624'
+          token: ${{ secrets.BOT_TOKEN }}
+          message: |
+            🚀 نشر مشروع Web:
+            - Frontend: ${{ steps.frontend.outcome }}
+            - Backend: ${{ steps.backend.outcome }}
+            🔗 التفاصيل كاملة في GitHub Actions logs
