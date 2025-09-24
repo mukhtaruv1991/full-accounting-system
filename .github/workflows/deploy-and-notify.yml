@@ -6,81 +6,80 @@ on:
       - main
 
 jobs:
-  deploy:
-    name: Deploy and Notify
+  # --- JOB FOR BACKEND ---
+  deploy-backend:
+    name: Deploy Backend
     runs-on: ubuntu-latest
-    
-    env:
-      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
-    strategy:
-      matrix:
-        service:
-          - name: "Backend"
-            id: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
-          - name: "Frontend"
-            id: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
-
     steps:
       - name: 1. Install jq
         run: sudo apt-get -y install jq
 
-      - name: 2. Trigger Deploy on Render
-        id: trigger
+      - name: 2. Trigger, Poll, and Notify
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
+          SERVICE_NAME: "Backend"
         run: |
-          echo "Triggering deploy for ${{ matrix.service.name }}..."
-          response=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/${{ matrix.service.id }}/deploys")
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
-          if [ "$http_code" -ne 201 ]; then
-            echo "::error::Failed to trigger deploy. HTTP Status: $http_code"
-            echo "::error::Response from Render: $body"
-            exit 1
-          fi
-          deploy_id=$(echo "$body" | jq -r '.id')
-          echo "Deploy triggered with ID: $deploy_id"
-          echo "deploy_id=$deploy_id" >> $GITHUB_ENV
-
-      - name: 3. Wait and Poll for Deploy Status
-        id: poll
-        run: |
-          echo "Waiting for deployment..."
+          # --- Trigger ---
+          deploy_id=$(curl -s -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" | jq -r '.id')
+          if [ -z "$deploy_id" ] || [ "$deploy_id" == "null" ]; then exit 1; fi
+          
+          # --- Poll ---
+          final_status="unknown"
           for i in {1..60}; do
-            response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/${{ matrix.service.id }}/deploys/${{ env.deploy_id }}")
-            status=$(echo $response | jq -r '.status')
-            echo "Current status for ${{ matrix.service.name }}: $status"
+            status=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id" | jq -r '.status')
             if [[ "$status" == "live" || "$status" == "build_failed" || "$status" == "deploy_failed" || "$status" == "canceled" ]]; then
-              echo "Final status detected: $status"
-              echo "final_status=$status" >> $GITHUB_ENV
-              exit 0
+              final_status=$status
+              break
             fi
             sleep 10
           done
-          echo "::error::Polling timed out."
-          echo "final_status=timed_out" >> $GITHUB_ENV
-          exit 1
-        continue-on-error: true
-
-      - name: 4. Send Telegram Notification
-        if: always()
-        run: |
-          STATUS=${{ steps.poll.outputs.final_status || 'trigger_failed' }}
-          SERVICE_NAME="${{ matrix.service.name }}"
-          REPO_NAME="${{ github.repository }}"
+          
+          # --- Notify ---
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
           ACTION_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
-          if [ "$STATUS" == "live" ]; then
-            ICON="✅"
-            MESSAGE="🚀 *Deploy Succeeded* for *$SERVICE_NAME*"
-          else
-            ICON="❌"
-            MESSAGE="🚨 *Deploy Failed* for *$SERVICE_NAME* with status: \`$STATUS\`"
-          fi
-          
-          TEXT="$ICON $MESSAGE%0A%0A*Repository:* [$REPO_NAME](${{ github.server_url }}/$REPO_NAME)%0A*Commit:* [$SHORT_SHA]($COMMIT_URL)%0A*Logs:* [View Action]($ACTION_URL)"
-          
+          if [ "$final_status" == "live" ]; then ICON="✅"; MESSAGE="🚀 *Deploy Succeeded* for *$SERVICE_NAME*"; else ICON="❌"; MESSAGE="🚨 *Deploy Failed* for *$SERVICE_NAME* with status: \`$final_status\`"; fi
+          TEXT="$ICON $MESSAGE%0A%0A*Commit:* [$SHORT_SHA](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})%0A*Logs:* [View Action]($ACTION_URL)"
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d "chat_id=$TELEGRAM_CHAT_ID" -d "text=$TEXT" -d "parse_mode=Markdown"
+          if [ "$final_status" != "live" ]; then exit 1; fi
+
+  # --- JOB FOR FRONTEND ---
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Install jq
+        run: sudo apt-get -y install jq
+
+      - name: 2. Trigger, Poll, and Notify
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
+          SERVICE_NAME: "Frontend"
+        run: |
+          # --- Trigger ---
+          deploy_id=$(curl -s -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" | jq -r '.id')
+          if [ -z "$deploy_id" ] || [ "$deploy_id" == "null" ]; then exit 1; fi
+          
+          # --- Poll ---
+          final_status="unknown"
+          for i in {1..60}; do
+            status=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id" | jq -r '.status')
+            if [[ "$status" == "live" || "$status" == "build_failed" || "$status" == "deploy_failed" || "$status" == "canceled" ]]; then
+              final_status=$status
+              break
+            fi
+            sleep 10
+          done
+          
+          # --- Notify ---
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          ACTION_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ "$final_status" == "live" ]; then ICON="✅"; MESSAGE="🚀 *Deploy Succeeded* for *$SERVICE_NAME*"; else ICON="❌"; MESSAGE="🚨 *Deploy Failed* for *$SERVICE_NAME* with status: \`$final_status\`"; fi
+          TEXT="$ICON $MESSAGE%0A%0A*Commit:* [$SHORT_SHA](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})%0A*Logs:* [View Action]($ACTION_URL)"
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d "chat_id=$TELEGRAM_CHAT_ID" -d "text=$TEXT" -d "parse_mode=Markdown"
+          if [ "$final_status" != "live" ]; then exit 1; fi
