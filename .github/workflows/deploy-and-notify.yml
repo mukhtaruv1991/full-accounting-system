@@ -1,4 +1,4 @@
-name: Deploy to Render and Notify
+name: Deploy to Render with Real-time Logs
 
 on:
   push:
@@ -10,150 +10,146 @@ jobs:
     name: Deploy Backend
     runs-on: ubuntu-latest
     env:
-      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       RENDER_SERVICE_ID: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
       SERVICE_NAME: "Backend"
     steps:
       - name: Install jq
-        run: sudo apt-get -y install jq
+        run: sudo apt-get -y install jq curl
 
       - name: Deploy and Notify
         run: |
-          echo "🚀 Starting $SERVICE_NAME deployment..."
-          
-          DEPLOY_RESPONSE=$(curl -s -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Accept: application/json" \
-            -d '{}')
-
-          DEPLOY_ID=$(echo "$DEPLOY_RESPONSE" | jq -r '.id')
-
-          if [ -z "$DEPLOY_ID" ] || [ "$DEPLOY_ID" = "null" ]; then
-            MSG="❌ $SERVICE_NAME deployment failed to start.\n$DEPLOY_RESPONSE"
+          send_telegram() {
+            local text="$1"
             curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
               -d "chat_id=$TELEGRAM_CHAT_ID" \
-              -d "text=$MSG"
+              -d "parse_mode=Markdown" \
+              -d "text=$text"
+          }
+
+          echo "🚀 Starting $SERVICE_NAME deploy..."
+          send_telegram "🚀 $SERVICE_NAME deployment started"
+
+          # Trigger deploy on Render
+          deploy_response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Accept: application/json" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys")
+
+          http_code=$(echo "$deploy_response" | tail -n1)
+          body=$(echo "$deploy_response" | sed '$d')
+
+          if [ "$http_code" -ne 201 ]; then
+            send_telegram "❌ Trigger Failed for $SERVICE_NAME. Check API Key or Service ID."
             exit 1
           fi
 
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-            -d "chat_id=$TELEGRAM_CHAT_ID" \
-            -d "text=🚀 $SERVICE_NAME deployment started (Deploy ID: $DEPLOY_ID)"
+          deploy_id=$(echo "$body" | jq -r '.id')
+          echo "Deploy ID: $deploy_id"
 
-          LAST_EVENT_ID=""
-          FINAL_STATUS=""
+          declare -A sent_events
 
+          # Polling loop to send logs in real-time
           while true; do
-            sleep 15
+            sleep 10
 
+            # Get deploy events (logs)
             EVENTS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
-              "https://api.render.com/v1/deploys/$DEPLOY_ID/events")
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id/events")
 
-            STATUS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
-              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" | jq -r '.status')
+            for row in $(echo "$EVENTS" | jq -c '.[]'); do
+              EID=$(echo "$row" | jq -r '.id')
+              MSG=$(echo "$row" | jq -r '.message')
 
-            # إرسال أي حدث جديد
-            echo "$EVENTS" | jq -c '.[]' | while read e; do
-              EID=$(echo "$e" | jq -r '.id')
-              MSG=$(echo "$e" | jq -r '.message')
-              if [[ "$EID" != "$LAST_EVENT_ID" ]]; then
-                curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-                  -d "chat_id=$TELEGRAM_CHAT_ID" \
-                  -d "text=• $MSG"
-                LAST_EVENT_ID=$EID
+              if [ -z "${sent_events[$EID]}" ]; then
+                send_telegram "• $MSG"
+                sent_events[$EID]=1
               fi
             done
 
-            if [[ "$STATUS" == "live" || "$STATUS" == "build_failed" || "$STATUS" == "deploy_failed" || "$STATUS" == "canceled" ]]; then
-              FINAL_STATUS=$STATUS
+            # Check deploy status
+            STATUS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id" | jq -r '.status')
+
+            if [[ "$STATUS" == "live" ]]; then
+              send_telegram "✅ $SERVICE_NAME deploy succeeded!"
+              break
+            elif [[ "$STATUS" == "build_failed" || "$STATUS" == "deploy_failed" || "$STATUS" == "canceled" ]]; then
+              send_telegram "❌ $SERVICE_NAME deploy failed with status: $STATUS"
               break
             fi
           done
-
-          # إشعار نهائي
-          if [ "$FINAL_STATUS" == "live" ]; then
-            FINAL_MSG="✅ $SERVICE_NAME deploy succeeded!"
-          else
-            FINAL_MSG="❌ $SERVICE_NAME deploy failed with status: $FINAL_STATUS"
-          fi
-
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-            -d "chat_id=$TELEGRAM_CHAT_ID" \
-            -d "text=$FINAL_MSG"
 
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
     env:
-      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       RENDER_SERVICE_ID: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
       SERVICE_NAME: "Frontend"
     steps:
       - name: Install jq
-        run: sudo apt-get -y install jq
+        run: sudo apt-get -y install jq curl
 
       - name: Deploy and Notify
         run: |
-          echo "🚀 Starting $SERVICE_NAME deployment..."
-          
-          DEPLOY_RESPONSE=$(curl -s -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Accept: application/json" \
-            -d '{}')
-
-          DEPLOY_ID=$(echo "$DEPLOY_RESPONSE" | jq -r '.id')
-
-          if [ -z "$DEPLOY_ID" ] || [ "$DEPLOY_ID" = "null" ]; then
-            MSG="❌ $SERVICE_NAME deployment failed to start.\n$DEPLOY_RESPONSE"
+          send_telegram() {
+            local text="$1"
             curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
               -d "chat_id=$TELEGRAM_CHAT_ID" \
-              -d "text=$MSG"
+              -d "parse_mode=Markdown" \
+              -d "text=$text"
+          }
+
+          echo "🚀 Starting $SERVICE_NAME deploy..."
+          send_telegram "🚀 $SERVICE_NAME deployment started"
+
+          # Trigger deploy on Render
+          deploy_response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Accept: application/json" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys")
+
+          http_code=$(echo "$deploy_response" | tail -n1)
+          body=$(echo "$deploy_response" | sed '$d')
+
+          if [ "$http_code" -ne 201 ]; then
+            send_telegram "❌ Trigger Failed for $SERVICE_NAME. Check API Key or Service ID."
             exit 1
           fi
 
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-            -d "chat_id=$TELEGRAM_CHAT_ID" \
-            -d "text=🚀 $SERVICE_NAME deployment started (Deploy ID: $DEPLOY_ID)"
+          deploy_id=$(echo "$body" | jq -r '.id')
+          echo "Deploy ID: $deploy_id"
 
-          LAST_EVENT_ID=""
-          FINAL_STATUS=""
+          declare -A sent_events
 
           while true; do
-            sleep 15
-
+            sleep 10
             EVENTS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
-              "https://api.render.com/v1/deploys/$DEPLOY_ID/events")
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id/events")
 
-            STATUS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
-              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" | jq -r '.status')
+            for row in $(echo "$EVENTS" | jq -c '.[]'); do
+              EID=$(echo "$row" | jq -r '.id')
+              MSG=$(echo "$row" | jq -r '.message')
 
-            echo "$EVENTS" | jq -c '.[]' | while read e; do
-              EID=$(echo "$e" | jq -r '.id')
-              MSG=$(echo "$e" | jq -r '.message')
-              if [[ "$EID" != "$LAST_EVENT_ID" ]]; then
-                curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-                  -d "chat_id=$TELEGRAM_CHAT_ID" \
-                  -d "text=• $MSG"
-                LAST_EVENT_ID=$EID
+              if [ -z "${sent_events[$EID]}" ]; then
+                send_telegram "• $MSG"
+                sent_events[$EID]=1
               fi
             done
 
-            if [[ "$STATUS" == "live" || "$STATUS" == "build_failed" || "$STATUS" == "deploy_failed" || "$STATUS" == "canceled" ]]; then
-              FINAL_STATUS=$STATUS
+            STATUS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id" | jq -r '.status')
+
+            if [[ "$STATUS" == "live" ]]; then
+              send_telegram "✅ $SERVICE_NAME deploy succeeded!"
+              break
+            elif [[ "$STATUS" == "build_failed" || "$STATUS" == "deploy_failed" || "$STATUS" == "canceled" ]]; then
+              send_telegram "❌ $SERVICE_NAME deploy failed with status: $STATUS"
               break
             fi
           done
-
-          if [ "$FINAL_STATUS" == "live" ]; then
-            FINAL_MSG="✅ $SERVICE_NAME deploy succeeded!"
-          else
-            FINAL_MSG="❌ $SERVICE_NAME deploy failed with status: $FINAL_STATUS"
-          fi
-
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-            -d "chat_id=$TELEGRAM_CHAT_ID" \
-            -d "text=$FINAL_MSG"
