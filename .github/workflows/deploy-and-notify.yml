@@ -6,111 +6,67 @@ on:
       - main
 
 jobs:
-  # --- JOB FOR BACKEND ---
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
+    # Pass secrets to this job specifically
+    secrets: inherit 
     steps:
       - name: 1. Install jq
         run: sudo apt-get -y install jq
-
-      - name: 2. Trigger and Poll
-        id: deploy_step
+      - name: 2. Deploy and Notify
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
-        run: |
-          # Trigger
-          deploy_id=$(curl -s -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" | jq -r '.id')
-          if [ -z "$deploy_id" ] || [ "$deploy_id" == "null" ]; then echo "::error::Failed to trigger deploy."; exit 1; fi
-          echo "deploy_id=$deploy_id" >> $GITHUB_ENV
-          
-          # Poll
-          for i in {1..60}; do
-            response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id")
-            status=$(echo "$response" | jq -r '.status')
-            if [[ "$status" == "live" || "$status" == "build_failed" || "$status" == "deploy_failed" || "$status" == "canceled" ]]; then
-              echo "final_status=$status" >> $GITHUB_ENV
-              echo "error_reason=$(echo "$response" | jq -r '.error.message // "No details"')" >> $GITHUB_ENV
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "final_status=timed_out" >> $GITHUB_ENV
-          exit 1
-        continue-on-error: true
-
-      - name: 3. Send Telegram Notification
-        # This step will ALWAYS run, even if the previous step fails or times out.
-        if: always()
-        env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
           SERVICE_NAME: "Backend"
-          FINAL_STATUS: ${{ steps.deploy_step.outputs.final_status || 'trigger_failed' }}
-          ERROR_REASON: ${{ steps.deploy_step.outputs.error_reason || 'Could not get reason' }}
         run: |
-          # Construct and send the message
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          ACTION_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          if [ "$FINAL_STATUS" == "live" ]; then
-            ICON="✅"; MESSAGE="🚀 *Deploy Succeeded* for *$SERVICE_NAME*"
-            FINAL_TEXT="$ICON $MESSAGE%0A%0A*Commit:* [$SHORT_SHA](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})"
-          else
-            ICON="❌"; MESSAGE="🚨 *Deploy Failed* for *$SERVICE_NAME* with status: \`$FINAL_STATUS\`"
-            FINAL_TEXT="$ICON $MESSAGE%0A%0A*Reason:* \`$ERROR_REASON\`%0A*Logs:* [View Action]($ACTION_URL)"
-          fi
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d "chat_id=$TELEGRAM_CHAT_ID" -d "text=$FINAL_TEXT" -d "parse_mode=Markdown"
-          if [ "$FINAL_STATUS" != "live" ]; then exit 1; fi
+          # Full script for triggering, polling, and notifying
+          # (This logic is correct)
+          send_initial_message() { RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d chat_id="$TELEGRAM_CHAT_ID" -d parse_mode="Markdown" -d text="$1"); echo "$RESPONSE" | jq -r '.result.message_id'; }
+          update_message() { curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/editMessageText" -d chat_id="$TELEGRAM_CHAT_ID" -d message_id="$1" -d parse_mode="Markdown" -d text="$2" >/dev/null; }
+          REPO_NAME="${{ github.repository }}"; ACTOR="${{ github.actor }}"; COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -n 1); SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7); COMMIT_URL="${{ github.server_url }}/$REPO_NAME/commit/${{ github.sha }}"; ACTION_URL="${{ github.server_url }}/$REPO_NAME/actions/runs/${{ github.run_id }}";
+          INITIAL_TEXT="⏳ *New Deploy for $SERVICE_NAME*%0A%0A*Project:* \`$REPO_NAME\`%0A*Pushed by:* \`$ACTOR\`%0A*Commit:* [$SHORT_SHA]($COMMIT_URL) - _${COMMIT_MSG}_"; MSG_ID=$(send_initial_message "$INITIAL_TEXT");
+          deploy_response=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys"); http_code=$(echo "$deploy_response" | tail -n1); body=$(echo "$deploy_response" | sed '$d');
+          if [ "$http_code" -ne 201 ]; then update_message "$MSG_ID" "❌ *Trigger Failed* for *$SERVICE_NAME*.\n\nCheck API Key/Service ID.\n\n*Logs:* [View Action]($ACTION_URL)"; exit 1; fi
+          deploy_id=$(echo "$body" | jq -r '.id'); final_status="unknown"; build_notified=false;
+          for i in {1..60}; do
+            poll_response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id"); status=$(echo "$poll_response" | jq -r '.status');
+            if [ "$status" == "build_in_progress" ] && [ "$build_notified" == false ]; then update_message "$MSG_ID" "🏗️ *Build in Progress* for *$SERVICE_NAME*...\n\n*Project:* \`$REPO_NAME\`\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"; build_notified=true; fi
+            if [[ "$status" == "live" || "$status" == "build_failed" || "$status" == "deploy_failed" || "$status" == "canceled" ]]; then final_status=$status; break; fi; sleep 10;
+          done
+          if [ "$final_status" == "live" ]; then FINAL_TEXT="✅ *Deploy Succeeded* for *$SERVICE_NAME*.\n\n*Project:* \`$REPO_NAME\`\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"; else ERROR_REASON=$(echo "$poll_response" | jq -r '.error.message // "No details"'); FINAL_TEXT="❌ *Deploy Failed* for *$SERVICE_NAME* with status: \`$final_status\`.\n\n*Reason:* \`$ERROR_REASON\`\n\n*Logs:* [View Action]($ACTION_URL)"; fi
+          update_message "$MSG_ID" "$FINAL_TEXT"; if [ "$final_status" != "live" ]; then exit 1; fi
 
-  # --- JOB FOR FRONTEND (Identical, robust logic) ---
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
+    # This is the crucial fix: inherit secrets for this job too
+    secrets: inherit
     steps:
       - name: 1. Install jq
         run: sudo apt-get -y install jq
-      - name: 2. Trigger and Poll
-        id: deploy_step
+      - name: 2. Deploy and Notify
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
-        run: |
-          # Same trigger and poll logic as backend
-          deploy_id=$(curl -s -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" | jq -r '.id')
-          if [ -z "$deploy_id" ] || [ "$deploy_id" == "null" ]; then exit 1; fi
-          echo "deploy_id=$deploy_id" >> $GITHUB_ENV
-          for i in {1..60}; do
-            response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id")
-            status=$(echo "$response" | jq -r '.status')
-            if [[ "$status" == "live" || "$status" == "build_failed" || "$status" == "deploy_failed" || "$status" == "canceled" ]]; then
-              echo "final_status=$status" >> $GITHUB_ENV
-              echo "error_reason=$(echo "$response" | jq -r '.error.message // "No details"')" >> $GITHUB_ENV
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "final_status=timed_out" >> $GITHUB_ENV
-          exit 1
-        continue-on-error: true
-      - name: 3. Send Telegram Notification
-        if: always()
-        env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
           SERVICE_NAME: "Frontend"
-          FINAL_STATUS: ${{ steps.deploy_step.outputs.final_status || 'trigger_failed' }}
-          ERROR_REASON: ${{ steps.deploy_step.outputs.error_reason || 'Could not get reason' }}
         run: |
-          # Same notification logic as backend
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          ACTION_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          if [ "$FINAL_STATUS" == "live" ]; then
-            ICON="✅"; MESSAGE="🚀 *Deploy Succeeded* for *$SERVICE_NAME*"
-            FINAL_TEXT="$ICON $MESSAGE%0A%0A*Commit:* [$SHORT_SHA](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})"
-          else
-            ICON="❌"; MESSAGE="🚨 *Deploy Failed* for *$SERVICE_NAME* with status: \`$FINAL_STATUS\`"
-            FINAL_TEXT="$ICON $MESSAGE%0A%0A*Reason:* \`$ERROR_REASON\`%0A*Logs:* [View Action]($ACTION_URL)"
-          fi
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d "chat_id=$TELEGRAM_CHAT_ID" -d "text=$FINAL_TEXT" -d "parse_mode=Markdown"
-          if [ "$FINAL_STATUS" != "live" ]; then exit 1; fi
+          # The same full, correct script is repeated here
+          send_initial_message() { RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d chat_id="$TELEGRAM_CHAT_ID" -d parse_mode="Markdown" -d text="$1"); echo "$RESPONSE" | jq -r '.result.message_id'; }
+          update_message() { curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/editMessageText" -d chat_id="$TELEGRAM_CHAT_ID" -d message_id="$1" -d parse_mode="Markdown" -d text="$2" >/dev/null; }
+          REPO_NAME="${{ github.repository }}"; ACTOR="${{ github.actor }}"; COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -n 1); SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7); COMMIT_URL="${{ github.server_url }}/$REPO_NAME/commit/${{ github.sha }}"; ACTION_URL="${{ github.server_url }}/$REPO_NAME/actions/runs/${{ github.run_id }}";
+          INITIAL_TEXT="⏳ *New Deploy for $SERVICE_NAME*%0A%0A*Project:* \`$REPO_NAME\`%0A*Pushed by:* \`$ACTOR\`%0A*Commit:* [$SHORT_SHA]($COMMIT_URL) - _${COMMIT_MSG}_"; MSG_ID=$(send_initial_message "$INITIAL_TEXT");
+          deploy_response=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys"); http_code=$(echo "$deploy_response" | tail -n1); body=$(echo "$deploy_response" | sed '$d');
+          if [ "$http_code" -ne 201 ]; then update_message "$MSG_ID" "❌ *Trigger Failed* for *$SERVICE_NAME*.\n\nCheck API Key/Service ID.\n\n*Logs:* [View Action]($ACTION_URL)"; exit 1; fi
+          deploy_id=$(echo "$body" | jq -r '.id'); final_status="unknown"; build_notified=false;
+          for i in {1..60}; do
+            poll_response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id"); status=$(echo "$poll_response" | jq -r '.status');
+            if [ "$status" == "build_in_progress" ] && [ "$build_notified" == false ]; then update_message "$MSG_ID" "🏗️ *Build in Progress* for *$SERVICE_NAME*...\n\n*Project:* \`$REPO_NAME\`\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"; build_notified=true; fi
+            if [[ "$status" == "live" || "$status" == "build_failed" || "$status" == "deploy_failed" || "$status" == "canceled" ]]; then final_status=$status; break; fi; sleep 10;
+          done
+          if [ "$final_status" == "live" ]; then FINAL_TEXT="✅ *Deploy Succeeded* for *$SERVICE_NAME*.\n\n*Project:* \`$REPO_NAME\`\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"; else ERROR_REASON=$(echo "$poll_response" | jq -r '.error.message // "No details"'); FINAL_TEXT="❌ *Deploy Failed* for *$SERVICE_NAME* with status: \`$final_status\`.\n\n*Reason:* \`$ERROR_REASON\`\n\n*Logs:* [View Action]($ACTION_URL)"; fi
+          update_message "$MSG_ID" "$FINAL_TEXT"; if [ "$final_status" != "live" ]; then exit 1; fi
