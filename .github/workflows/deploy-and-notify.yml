@@ -10,7 +10,6 @@ jobs:
     name: Deploy and Notify
     runs-on: ubuntu-latest
     
-    # Define secrets as environment variables for the job
     env:
       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -18,7 +17,6 @@ jobs:
 
     strategy:
       matrix:
-        # Now we can reference the secrets from the job's env context
         service:
           - name: "Backend"
             id: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
@@ -26,23 +24,26 @@ jobs:
             id: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
 
     steps:
-      - name: 1. Trigger Deploy on Render
+      - name: 1. Install jq
+        run: sudo apt-get -y install jq
+
+      - name: 2. Trigger Deploy on Render
         id: trigger
         run: |
           echo "Triggering deploy for ${{ matrix.service.name }}..."
-          deploy_id=$(curl -s -X POST \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Accept: application/json" \
-            "https://api.render.com/v1/services/${{ matrix.service.id }}/deploys" | jq -r '.id')
-          
-          if [ -z "$deploy_id" ] || [ "$deploy_id" == "null" ]; then
-            echo "::error::Failed to trigger deploy for ${{ matrix.service.name }}. Check API Key and Service ID."
+          response=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/${{ matrix.service.id }}/deploys")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          if [ "$http_code" -ne 201 ]; then
+            echo "::error::Failed to trigger deploy. HTTP Status: $http_code"
+            echo "::error::Response from Render: $body"
             exit 1
           fi
+          deploy_id=$(echo "$body" | jq -r '.id')
           echo "Deploy triggered with ID: $deploy_id"
           echo "deploy_id=$deploy_id" >> $GITHUB_ENV
 
-      - name: 2. Wait and Poll for Deploy Status
+      - name: 3. Wait and Poll for Deploy Status
         id: poll
         run: |
           echo "Waiting for deployment..."
@@ -62,13 +63,12 @@ jobs:
           exit 1
         continue-on-error: true
 
-      - name: 3. Send Telegram Notification
+      - name: 4. Send Telegram Notification
         if: always()
         run: |
           STATUS=${{ steps.poll.outputs.final_status || 'trigger_failed' }}
           SERVICE_NAME="${{ matrix.service.name }}"
           REPO_NAME="${{ github.repository }}"
-          # Correct way to get short SHA
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
           ACTION_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -83,7 +83,4 @@ jobs:
           
           TEXT="$ICON $MESSAGE%0A%0A*Repository:* [$REPO_NAME](${{ github.server_url }}/$REPO_NAME)%0A*Commit:* [$SHORT_SHA]($COMMIT_URL)%0A*Logs:* [View Action]($ACTION_URL)"
           
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-            -d "chat_id=$TELEGRAM_CHAT_ID" \
-            -d "text=$TEXT" \
-            -d "parse_mode=Markdown"
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d "chat_id=$TELEGRAM_CHAT_ID" -d "text=$TEXT" -d "parse_mode=Markdown"
