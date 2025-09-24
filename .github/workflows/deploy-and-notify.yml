@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     secrets: inherit
     steps:
-      - name: 1. Install jq
+      - name: Install jq
         run: sudo apt-get -y install jq
 
-      - name: 2. Deploy and Notify
+      - name: Deploy and Notify
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -22,27 +22,26 @@ jobs:
           RENDER_SERVICE_ID: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
           SERVICE_NAME: "Backend"
         run: |
-          # 1. Trigger Deploy
+          # Trigger Deploy
           DEPLOY_RESPONSE=$(curl -s -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
             -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Accept: application/json" \
             -d '{}')
-
           DEPLOY_ID=$(echo "$DEPLOY_RESPONSE" | jq -r '.id')
           if [ "$DEPLOY_ID" = "null" ] || [ -z "$DEPLOY_ID" ]; then
-            MSG="❌ $SERVICE_NAME deployment failed to start.\nResponse:\n$DEPLOY_RESPONSE"
+            MSG="❌ $SERVICE_NAME deployment failed to start.\n$DEPLOY_RESPONSE"
             curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
               -d "chat_id=$TELEGRAM_CHAT_ID" \
               -d "text=$MSG"
             exit 1
           fi
 
-          # 2. Initial message
+          # Initial notification
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -d "chat_id=$TELEGRAM_CHAT_ID" \
-            -d "text=🚀 $SERVICE_NAME deployment started.\nDeploy ID: $DEPLOY_ID"
+            -d "text=🚀 $SERVICE_NAME deployment started (Deploy ID: $DEPLOY_ID)"
 
-          # 3. Polling loop for events
+          # Polling loop for events
           LAST_EVENT_ID=""
           FINAL_STATUS=""
           while true; do
@@ -54,7 +53,7 @@ jobs:
             STATUS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
               "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" | jq -r '.status')
 
-            # Get new events
+            # Send new events
             NEW_EVENTS=$(echo "$EVENTS" | jq -c '.[]' | while read e; do
               EID=$(echo "$e" | jq -r '.id')
               MSG=$(echo "$e" | jq -r '.message')
@@ -76,7 +75,7 @@ jobs:
             fi
           done
 
-          # 4. Final message
+          # Final notification
           if [ "$FINAL_STATUS" == "live" ]; then
             FINAL_MSG="✅ $SERVICE_NAME deploy succeeded!"
           else
@@ -92,10 +91,10 @@ jobs:
     runs-on: ubuntu-latest
     secrets: inherit
     steps:
-      - name: 1. Install jq
+      - name: Install jq
         run: sudo apt-get -y install jq
 
-      - name: 2. Deploy and Notify
+      - name: Deploy and Notify
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -107,10 +106,9 @@ jobs:
             -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Accept: application/json" \
             -d '{}')
-
           DEPLOY_ID=$(echo "$DEPLOY_RESPONSE" | jq -r '.id')
           if [ "$DEPLOY_ID" = "null" ] || [ -z "$DEPLOY_ID" ]; then
-            MSG="❌ $SERVICE_NAME deployment failed to start.\nResponse:\n$DEPLOY_RESPONSE"
+            MSG="❌ $SERVICE_NAME deployment failed to start.\n$DEPLOY_RESPONSE"
             curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
               -d "chat_id=$TELEGRAM_CHAT_ID" \
               -d "text=$MSG"
@@ -119,7 +117,7 @@ jobs:
 
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -d "chat_id=$TELEGRAM_CHAT_ID" \
-            -d "text=🚀 $SERVICE_NAME deployment started.\nDeploy ID: $DEPLOY_ID"
+            -d "text=🚀 $SERVICE_NAME deployment started (Deploy ID: $DEPLOY_ID)"
 
           LAST_EVENT_ID=""
           FINAL_STATUS=""
@@ -127,7 +125,6 @@ jobs:
             sleep 20
             EVENTS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
               "https://api.render.com/v1/deploys/$DEPLOY_ID/events")
-
             STATUS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
               "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" | jq -r '.status')
 
