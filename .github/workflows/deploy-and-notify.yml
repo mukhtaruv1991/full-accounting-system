@@ -9,8 +9,7 @@ jobs:
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
-    # Pass secrets to this job specifically
-    secrets: inherit 
+    secrets: inherit # Correct indentation
     steps:
       - name: 1. Install jq
         run: sudo apt-get -y install jq
@@ -22,8 +21,7 @@ jobs:
           RENDER_SERVICE_ID: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
           SERVICE_NAME: "Backend"
         run: |
-          # Full script for triggering, polling, and notifying
-          # (This logic is correct)
+          # Full, correct script for notifications
           send_initial_message() { RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d chat_id="$TELEGRAM_CHAT_ID" -d parse_mode="Markdown" -d text="$1"); echo "$RESPONSE" | jq -r '.result.message_id'; }
           update_message() { curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/editMessageText" -d chat_id="$TELEGRAM_CHAT_ID" -d message_id="$1" -d parse_mode="Markdown" -d text="$2" >/dev/null; }
           REPO_NAME="${{ github.repository }}"; ACTOR="${{ github.actor }}"; COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -n 1); SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7); COMMIT_URL="${{ github.server_url }}/$REPO_NAME/commit/${{ github.sha }}"; ACTION_URL="${{ github.server_url }}/$REPO_NAME/actions/runs/${{ github.run_id }}";
@@ -42,8 +40,7 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
-    # This is the crucial fix: inherit secrets for this job too
-    secrets: inherit
+    secrets: inherit # Correct indentation
     steps:
       - name: 1. Install jq
         run: sudo apt-get -y install jq
