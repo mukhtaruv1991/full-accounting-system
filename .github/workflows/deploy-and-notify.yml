@@ -9,8 +9,16 @@ jobs:
   deploy:
     name: Deploy and Notify
     runs-on: ubuntu-latest
+    
+    # Define secrets as environment variables for the job
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
     strategy:
       matrix:
+        # Now we can reference the secrets from the job's env context
         service:
           - name: "Backend"
             id: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
@@ -18,73 +26,62 @@ jobs:
             id: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
 
     steps:
-      - name: 1. Checkout Code
-        uses: actions/checkout@v3
-
-      - name: 2. Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: 3. Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: 4. Install Dependencies
-        run: pnpm install
-
-      - name: 5. Trigger Deploy and Notify
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          RENDER_SERVICE_ID: ${{ matrix.service.id }}
-          SERVICE_NAME: ${{ matrix.service.name }}
+      - name: 1. Trigger Deploy on Render
+        id: trigger
         run: |
-          # This combined step triggers, polls, and notifies.
-          
-          # --- Trigger Deploy ---
-          echo "Triggering deploy for $SERVICE_NAME..."
+          echo "Triggering deploy for ${{ matrix.service.name }}..."
           deploy_id=$(curl -s -X POST \
             -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Accept: application/json" \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" | jq -r '.id')
-
+            "https://api.render.com/v1/services/${{ matrix.service.id }}/deploys" | jq -r '.id')
+          
           if [ -z "$deploy_id" ] || [ "$deploy_id" == "null" ]; then
-            echo "::error::Failed to trigger deploy for $SERVICE_NAME."
+            echo "::error::Failed to trigger deploy for ${{ matrix.service.name }}. Check API Key and Service ID."
             exit 1
           fi
           echo "Deploy triggered with ID: $deploy_id"
+          echo "deploy_id=$deploy_id" >> $GITHUB_ENV
 
-          # --- Poll for Status ---
-          final_status="unknown"
+      - name: 2. Wait and Poll for Deploy Status
+        id: poll
+        run: |
+          echo "Waiting for deployment..."
           for i in {1..60}; do
-            response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id")
+            response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/${{ matrix.service.id }}/deploys/${{ env.deploy_id }}")
             status=$(echo $response | jq -r '.status')
-            echo "Current status for $SERVICE_NAME: $status"
+            echo "Current status for ${{ matrix.service.name }}: $status"
             if [[ "$status" == "live" || "$status" == "build_failed" || "$status" == "deploy_failed" || "$status" == "canceled" ]]; then
-              final_status=$status
-              break
+              echo "Final status detected: $status"
+              echo "final_status=$status" >> $GITHUB_ENV
+              exit 0
             fi
             sleep 10
           done
+          echo "::error::Polling timed out."
+          echo "final_status=timed_out" >> $GITHUB_ENV
+          exit 1
+        continue-on-error: true
 
-          # --- Send Notification ---
+      - name: 3. Send Telegram Notification
+        if: always()
+        run: |
+          STATUS=${{ steps.poll.outputs.final_status || 'trigger_failed' }}
+          SERVICE_NAME="${{ matrix.service.name }}"
           REPO_NAME="${{ github.repository }}"
+          # Correct way to get short SHA
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
           ACTION_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
-          if [ "$final_status" == "live" ]; then
+          if [ "$STATUS" == "live" ]; then
             ICON="✅"
             MESSAGE="🚀 *Deploy Succeeded* for *$SERVICE_NAME*"
           else
             ICON="❌"
-            MESSAGE="🚨 *Deploy Failed* for *$SERVICE_NAME* with status: \`$final_status\`"
+            MESSAGE="🚨 *Deploy Failed* for *$SERVICE_NAME* with status: \`$STATUS\`"
           fi
           
-          TEXT="$ICON $MESSAGE%0A%0A*Repository:* [$REPO_NAME](${{ github.server_url }}/$REPO_NAME)%0A*Commit:* [${{ github.sha:0:7 }}]($COMMIT_URL)%0A*Logs:* [View Action]($ACTION_URL)"
+          TEXT="$ICON $MESSAGE%0A%0A*Repository:* [$REPO_NAME](${{ github.server_url }}/$REPO_NAME)%0A*Commit:* [$SHORT_SHA]($COMMIT_URL)%0A*Logs:* [View Action]($ACTION_URL)"
           
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -d "chat_id=$TELEGRAM_CHAT_ID" \
