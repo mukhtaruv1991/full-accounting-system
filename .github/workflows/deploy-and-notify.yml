@@ -24,23 +24,25 @@ jobs:
         run: |
           # --- Helper functions for Telegram ---
           send_initial_message() {
-            TEXT="$1"
-            RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d chat_id="$TELEGRAM_CHAT_ID" -d parse_mode="Markdown" -d text="$TEXT")
+            RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d chat_id="$TELEGRAM_CHAT_ID" -d parse_mode="Markdown" -d text="$1")
             echo "$RESPONSE" | jq -r '.result.message_id'
           }
           update_message() {
-            MESSAGE_ID="$1"
-            TEXT="$2"
-            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/editMessageText" -d chat_id="$TELEGRAM_CHAT_ID" -d message_id="$MESSAGE_ID" -d parse_mode="Markdown" -d text="$TEXT" >/dev/null
+            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/editMessageText" -d chat_id="$TELEGRAM_CHAT_ID" -d message_id="$1" -d parse_mode="Markdown" -d text="$2" >/dev/null
           }
 
-          # --- Main Logic ---
+          # --- Context Variables ---
+          REPO_NAME="${{ github.repository }}"
+          ACTOR="${{ github.actor }}"
+          COMMIT_MSG_RAW="${{ github.event.head_commit.message }}"
+          COMMIT_MSG=$(echo "$COMMIT_MSG_RAW" | head -n 1) # Use only the first line of the commit message
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
-          ACTION_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_URL="${{ github.server_url }}/$REPO_NAME/commit/${{ github.sha }}"
+          ACTION_URL="${{ github.server_url }}/$REPO_NAME/actions/runs/${{ github.run_id }}"
           
-          # 1. Send initial message
-          MSG_ID=$(send_initial_message "⏳ *Triggering Deploy* for *$SERVICE_NAME*...")
+          # 1. Send initial rich message
+          INITIAL_TEXT="⏳ *New Deploy Triggered for $SERVICE_NAME*%0A%0A*Project:* \`$REPO_NAME\`%0A*Pushed by:* \`$ACTOR\`%0A*Commit:* [$SHORT_SHA]($COMMIT_URL) - _${COMMIT_MSG}_"
+          MSG_ID=$(send_initial_message "$INITIAL_TEXT")
 
           # 2. Trigger deploy
           deploy_response=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys")
@@ -48,7 +50,8 @@ jobs:
           body=$(echo "$deploy_response" | sed '$d')
 
           if [ "$http_code" -ne 201 ]; then
-            update_message "$MSG_ID" "❌ *Trigger Failed* for *$SERVICE_NAME*.\n\nCould not start deployment on Render. Check your API Key and Service ID.\n\n*Logs:* [View Action]($ACTION_URL)"
+            ERROR_TEXT="❌ *Trigger Failed* for *$SERVICE_NAME*.\n\nCould not start deployment on Render. Check API Key and Service ID.\n\n*Logs:* [View Action]($ACTION_URL)"
+            update_message "$MSG_ID" "$ERROR_TEXT"
             exit 1
           fi
           deploy_id=$(echo "$body" | jq -r '.id')
@@ -60,13 +63,11 @@ jobs:
             poll_response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id")
             status=$(echo "$poll_response" | jq -r '.status')
             
-            # Notify on build start
             if [ "$status" == "build_in_progress" ] && [ "$build_notified" == false ]; then
-              update_message "$MSG_ID" "🏗️ *Build in Progress* for *$SERVICE_NAME* on Render..."
+              update_message "$MSG_ID" "🏗️ *Build in Progress* for *$SERVICE_NAME* on Render...\n\n*Project:* \`$REPO_NAME\`\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"
               build_notified=true
             fi
             
-            # Check for final status
             if [[ "$status" == "live" || "$status" == "build_failed" || "$status" == "deploy_failed" || "$status" == "canceled" ]]; then
               final_status=$status
               break
@@ -76,7 +77,7 @@ jobs:
 
           # 4. Send final notification
           if [ "$final_status" == "live" ]; then
-            FINAL_TEXT="✅ *Deploy Succeeded* for *$SERVICE_NAME*.\n\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"
+            FINAL_TEXT="✅ *Deploy Succeeded* for *$SERVICE_NAME*.\n\n*Project:* \`$REPO_NAME\`\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"
           else
             ERROR_REASON=$(echo "$poll_response" | jq -r '.error.message // "No details available"')
             FINAL_TEXT="❌ *Deploy Failed* for *$SERVICE_NAME* with status: \`$final_status\`.\n\n*Reason:* \`$ERROR_REASON\`\n\n*Logs:* [View Action]($ACTION_URL)"
@@ -103,23 +104,25 @@ jobs:
         run: |
           # --- Helper functions for Telegram ---
           send_initial_message() {
-            TEXT="$1"
-            RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d chat_id="$CHAT_ID" -d parse_mode="Markdown" -d text="$TEXT")
+            RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d chat_id="$CHAT_ID" -d parse_mode="Markdown" -d text="$1")
             echo "$RESPONSE" | jq -r '.result.message_id'
           }
           update_message() {
-            MESSAGE_ID="$1"
-            TEXT="$2"
-            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/editMessageText" -d chat_id="$CHAT_ID" -d message_id="$MESSAGE_ID" -d parse_mode="Markdown" -d text="$TEXT" >/dev/null
+            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/editMessageText" -d chat_id="$CHAT_ID" -d message_id="$1" -d parse_mode="Markdown" -d text="$2" >/dev/null
           }
 
-          # --- Main Logic ---
+          # --- Context Variables ---
+          REPO_NAME="${{ github.repository }}"
+          ACTOR="${{ github.actor }}"
+          COMMIT_MSG_RAW="${{ github.event.head_commit.message }}"
+          COMMIT_MSG=$(echo "$COMMIT_MSG_RAW" | head -n 1)
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
-          ACTION_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_URL="${{ github.server_url }}/$REPO_NAME/commit/${{ github.sha }}"
+          ACTION_URL="${{ github.server_url }}/$REPO_NAME/actions/runs/${{ github.run_id }}"
           
-          # 1. Send initial message
-          MSG_ID=$(send_initial_message "⏳ *Triggering Deploy* for *$SERVICE_NAME*...")
+          # 1. Send initial rich message
+          INITIAL_TEXT="⏳ *New Deploy Triggered for $SERVICE_NAME*%0A%0A*Project:* \`$REPO_NAME\`%0A*Pushed by:* \`$ACTOR\`%0A*Commit:* [$SHORT_SHA]($COMMIT_URL) - _${COMMIT_MSG}_"
+          MSG_ID=$(send_initial_message "$INITIAL_TEXT")
 
           # 2. Trigger deploy
           deploy_response=$(curl -s -w "\n%{http_code}" -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys")
@@ -127,7 +130,8 @@ jobs:
           body=$(echo "$deploy_response" | sed '$d')
 
           if [ "$http_code" -ne 201 ]; then
-            update_message "$MSG_ID" "❌ *Trigger Failed* for *$SERVICE_NAME*.\n\nCould not start deployment on Render. Check your API Key and Service ID.\n\n*Logs:* [View Action]($ACTION_URL)"
+            ERROR_TEXT="❌ *Trigger Failed* for *$SERVICE_NAME*.\n\nCould not start deployment on Render. Check API Key and Service ID.\n\n*Logs:* [View Action]($ACTION_URL)"
+            update_message "$MSG_ID" "$ERROR_TEXT"
             exit 1
           fi
           deploy_id=$(echo "$body" | jq -r '.id')
@@ -139,13 +143,11 @@ jobs:
             poll_response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id")
             status=$(echo "$poll_response" | jq -r '.status')
             
-            # Notify on build start
             if [ "$status" == "build_in_progress" ] && [ "$build_notified" == false ]; then
-              update_message "$MSG_ID" "🏗️ *Build in Progress* for *$SERVICE_NAME* on Render..."
+              update_message "$MSG_ID" "🏗️ *Build in Progress* for *$SERVICE_NAME* on Render...\n\n*Project:* \`$REPO_NAME\`\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"
               build_notified=true
             fi
             
-            # Check for final status
             if [[ "$status" == "live" || "$status" == "build_failed" || "$status" == "deploy_failed" || "$status" == "canceled" ]]; then
               final_status=$status
               break
@@ -155,7 +157,7 @@ jobs:
 
           # 4. Send final notification
           if [ "$final_status" == "live" ]; then
-            FINAL_TEXT="✅ *Deploy Succeeded* for *$SERVICE_NAME*.\n\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"
+            FINAL_TEXT="✅ *Deploy Succeeded* for *$SERVICE_NAME*.\n\n*Project:* \`$REPO_NAME\`\n*Commit:* [$SHORT_SHA]($COMMIT_URL)"
           else
             ERROR_REASON=$(echo "$poll_response" | jq -r '.error.message // "No details available"')
             FINAL_TEXT="❌ *Deploy Failed* for *$SERVICE_NAME* with status: \`$final_status\`.\n\n*Reason:* \`$ERROR_REASON\`\n\n*Logs:* [View Action]($ACTION_URL)"
