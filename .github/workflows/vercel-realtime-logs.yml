@@ -1,0 +1,55 @@
+name: Vercel Deploy & Realtime Telegram Logs
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Trigger Vercel Deploy
+        id: vercel
+        run: |
+          echo "Triggering Vercel deploy..."
+          response=$(curl -s -X GET "https://api.vercel.com/v1/integrations/deploy/prj_9Vz4lBS1Gkba9eVw3yAEg1LdQWTF/BJRyi3RKzv" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}")
+          deployment_id=$(echo $response | jq -r '.job.id')
+          echo "deployment_id=$deployment_id" >> $GITHUB_ENV
+          echo "Deployment triggered with ID: $deployment_id"
+
+      - name: Stream Deployment Logs to Telegram
+        run: |
+          last_event_id=0
+          while true; do
+            events=$(curl -s -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+              "https://api.vercel.com/v12/deployments/${{ env.deployment_id }}/events" | jq -c '.events[]')
+            for event in $events; do
+              event_id=$(echo $event | jq -r '.id')
+              if [ "$event_id" -gt "$last_event_id" ]; then
+                message=$(echo $event | jq -r '.payload.message')
+                while [ -n "$message" ]; do
+                  part="${message:0:4000}"
+                  curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                    -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                    -d text="$part"
+                  message="${message:4000}"
+                done
+                last_event_id=$event_id
+              fi
+            done
+            status=$(curl -s -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+              https://api.vercel.com/v12/deployments/${{ env.deployment_id }} | jq -r '.readyState')
+            if [ "$status" = "READY" ] || [ "$status" = "ERROR" ]; then
+              curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                -d text="Deployment finished with status: $status"
+              break
+            fi
+            sleep 5
+          done
